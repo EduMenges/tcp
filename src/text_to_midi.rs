@@ -138,38 +138,52 @@ impl Partitura {
 
         match ch {
             ' ' => {
+                ///Aumenta volume para o DOBRO do volume; Se não puder aumentar, volta ao volume default (de início)
                 self.current_state.volume = match self.current_state.volume.checked_mul(2) {
                     Some(volume) => volume,
                     None => State::DEFAULT_VOLUME,
-                }
+                };
+                self.current_state.note = Note::Pause;
             }
             '0'..='9' => {
+                ///Trocar instrumento para o instrumento General MIDI cujo numero é igual ao valor do instrumento ATUAL + valor do dígito
                 if let Some(n) = ch.to_digit(10) {
                     self.current_state.instrument += n as u8;
                 }
+                self.current_state.note = Note::Pause;
             }
             '.' | '?' => {
+                ///Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                 let new_octave = self.current_state.octave + 1;
                 self.current_state.octave = if new_octave > State::MAX_OCTAVE {
                     State::DEFAULT_OCTAVE
                 } else {
                     new_octave
                 }
+                self.current_state.note = Note::Pause;
             }
             '!' => {
+                ///Trocar instrumento para o instrumento General MIDI #114 (Agogo)
                 self.current_state.instrument = 114;
+                self.current_state.note = Note::Pause;
             }
             '\n' => {
+                ///Trocar instrumento para o instrumento General MIDI #15 (Tubular Bells) 
                 self.current_state.instrument = 15;
+                self.current_state.note = Note::Pause;
             }
             ';' => {
+                ///Trocar instrumento para o instrumento General MIDI #76 (Pan Flute) 
                 self.current_state.instrument = 76;
+                self.current_state.note = Note::Pause;
             }
             ',' => {
+                ///Trocar instrumento para o instrumento General MIDI #20 (Church Organ) 
                 self.current_state.instrument = 20;
+                self.current_state.note = Note::Pause;
             }
             _ => {
-                todo!()
+                unreachable!();
             }
         }
 
