@@ -183,7 +183,7 @@ impl Partitura {
                 self.current_state.note = Note::Pause;
             }
             _ => {
-                unreachable!();
+                todo!();
             }
         }
 
