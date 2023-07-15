@@ -100,7 +100,7 @@ impl Default for State {
 }
 
 /// Segura informações sobre a música e oferece métodos para seu processamento.
-pub struct Partitura {
+pub struct Sheet {
     /// O BPM da partitura.
     bpm: u8,
     /// O estado atual.
@@ -111,7 +111,7 @@ pub struct Partitura {
     text: String,
 }
 
-impl Partitura {
+impl Sheet {
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u8, text: String) -> Self {
         Self {
