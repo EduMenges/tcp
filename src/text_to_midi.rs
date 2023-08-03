@@ -17,19 +17,22 @@ pub enum Note {
     La,
     /// Nota si.
     Si,
+    /// Representa uma ação
+    Action,
 }
 
 impl Note {
     /// A partir de um caractere, cria uma nota.
     pub fn from_char(ch: char) -> Option<Self> {
         match ch {
-            'A' => Some(Note::La),
-            'B' => Some(Note::Si),
-            'C' => Some(Note::Do),
-            'D' => Some(Note::Re),
-            'E' => Some(Note::Mi),
-            'F' => Some(Note::Fa),
-            'G' => Some(Note::Sol),
+            'A' | 'a' => Some(Note::La),
+            'B' | 'b' => Some(Note::Si),
+            'C' | 'c' => Some(Note::Do),
+            'D' | 'd' => Some(Note::Re),
+            'E' | 'e' => Some(Note::Mi),
+            'F' | 'f' => Some(Note::Fa),
+            'G' | 'g' => Some(Note::Sol),
+            ' ' => Some(Note::Pause),
             _ => None,
         }
     }
@@ -59,7 +62,7 @@ struct State {
     /// A oitava atual.
     octave: u8,
     /// O volume atual.
-    volume: u8,
+    volume: u16,
     /// A nota atual.
     note: Note,
 }
@@ -70,10 +73,12 @@ impl State {
     /// A oitava padrão.
     pub const DEFAULT_OCTAVE: u8 = 4;
     /// O volume padrão.
-    pub const DEFAULT_VOLUME: u8 = 100;
+    pub const DEFAULT_VOLUME: u16 = 100;
+
+    pub const MAX_VOLUME: u16 = 16383;
 
     /// Cria um estado novo.
-    pub fn new(instrument: u8, octave: u8, volume: u8, note: Note) -> Self {
+    pub fn new(instrument: u8, octave: u8, volume: u16, note: Note) -> Self {
         Self {
             instrument,
             octave,
@@ -132,14 +137,24 @@ impl Sheet {
         }
 
         match ch {
-            ' ' => {
+            
+            '+' => {
                 // Aumenta volume para o DOBRO do volume; Se não puder aumentar, volta ao volume default (de início)
-                self.current_state.volume = match self.current_state.volume.checked_mul(2) {
-                    Some(volume) => volume,
-                    None => State::DEFAULT_VOLUME,
+                self.current_state.volume = if (self.current_state.volume * 2 > State::MAX_VOLUME) {
+                    State::MAX_VOLUME
+                } else {
+                    self.current_state.volume * 2
                 };
-                self.current_state.note = Note::Pause;
+
+                self.current_state.note = Note::Action;
             }
+            '-' => {
+                // Volume retorna ao volume default
+                self.current_state.volume =  State::DEFAULT_VOLUME;
+                
+                self.current_state.note = Note::Action;
+            }
+            
             '0'..='9' => {
                 // Trocar instrumento para o instrumento General MIDI cujo numero é igual ao valor do instrumento ATUAL + valor do dígito
                 if let Some(n) = ch.to_digit(10) {
