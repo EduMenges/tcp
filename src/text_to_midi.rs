@@ -1,8 +1,3 @@
-/*
-b) seus elementos (módulos e classes) principais e os seus objetivos; Isto pode ser feito com
-um parágrafo para cada módulo/classe além dos atributos e métodos definidos até agora;
-*/
-
 /// Enum com as notas possíveis.
 #[derive(Clone, Copy)]
 pub enum Note {
