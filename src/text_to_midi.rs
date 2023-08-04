@@ -1,8 +1,10 @@
+use midi_msg::MidiMsg;
+
+use crate::midi_action::MIDIaction;
+
 /// Enum com as notas possíveis.
 #[derive(Clone, Copy)]
 pub enum Note {
-    /// Representa uma pausa, um silêncio.
-    Pause,
     /// Nota dó.
     Do,
     /// Nota ré.
@@ -39,16 +41,6 @@ impl Default for Note {
     fn default() -> Self {
         Note::Do
     }
-}
-
-/// Enum representando as possíveis ações de MIDI.
-#[derive(Clone, Copy)]
-pub enum MIDIaction {
-    Note(Note),
-    ChangeInstrument(u8),
-    Pause,
-    IncreaseVolume,
-    IncreaseOctave,
 }
 
 /// Estrutura que guarda o estado atual da música.
