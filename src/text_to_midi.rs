@@ -1,5 +1,5 @@
-use apres::MIDI;
 use midi_msg::MidiMsg;
+use midly::{num::*, Header, MetaMessage, Smf, Track, TrackEvent};
 
 use crate::midi_action::MIDIaction;
 
@@ -72,6 +72,8 @@ impl State {
 
     pub const DEFAULT_BPM: u8 = 80;
 
+    pub const MICROSECS_IN_MINUTE: u32 = 60_000_000;
+
     /// Cria um estado novo.
     pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u8, note: Note) -> Self {
         Self {
@@ -82,6 +84,14 @@ impl State {
             note: Some(note),
         }
     }
+
+    pub fn get_tempo(&self) -> u24 {
+        bpm_into_micros(self.bpm)
+    }
+}
+
+pub fn bpm_into_micros(bpm: u8) -> u24 {
+    u24::from_int_lossy(State::MICROSECS_IN_MINUTE / bpm as u32)
 }
 
 impl Default for State {
@@ -121,16 +131,27 @@ impl Sheet {
 
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
     pub fn proccess(self) -> Vec<MIDIaction> {
-        todo!()
+        let mut ret = Vec::<MIDIaction>::new();
+        ret.push(MIDIaction::EndTrack);
+        todo!();
+        return ret;
     }
 
-    pub fn into_bytes(actions: Vec<MIDIaction>) -> MIDI
-    {
-        let mut ret = MIDI::new();
+    pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {
+        let header: Header = Header {
+            format: midly::Format::SingleTrack,
+            timing: midly::Timing::Metrical(u15::from_int_lossy(480)),
+        };
+        let mut smf = Smf::new(header);
 
-        
+        let mut track = Track::new();
 
-        return ret;
+        for action in actions {
+            action.to_events(&mut track)
+        }
+
+        smf.tracks.push(track);
+        smf
     }
 
     /// Altera o current_state e coloca no fim do vetor
@@ -140,8 +161,7 @@ impl Sheet {
         if let Some(note) = new_note {
             self.current_state.note = Some(note);
             return;
-        }
-        else {
+        } else {
             self.current_state.note = None;
         }
 
