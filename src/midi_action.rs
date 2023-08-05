@@ -1,21 +1,21 @@
 use crate::text_to_midi::*;
+use midi_msg::MidiMsg;
 use midly::{num::*, *};
 
 /// Enum representando as possíveis ações de MIDI.
 #[derive(Clone, Copy)]
 pub enum MIDIaction {
-    PlayNote { bpm: u8, note: u8 },
+    PlayNote { bpm: u32, note: u8 },
     ChangeInstrument(u8),
-    ChangeVolume(u16),
-    ChangeOctave(u8),
-    ChangeBPM(u16),
-    Pause,
+    ChangeVolume(u8),
+    Pause(u32),
 }
 
 impl MIDIaction {
     const DEFAULT_TRACK: usize = 0;
-    const DEFAULT_CHANNEL: u4 = 0.into();
-    const DEFAULT_VELOCITY: u7 = (127 / 2).into();
+    const DEFAULT_CHANNEL: u4 = u4::from_int_lossy(0);
+    const DEFAULT_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
+    const INSTANT: u28 = u28::from_int_lossy(0);
 
     pub fn to_events(self, vec: &mut Track) {
         match self {
@@ -30,12 +30,85 @@ impl MIDIaction {
                         },
                     },
                 });
+                vec.push(TrackEvent {
+                    delta: u28::from_int_lossy(bpm),
+                    kind: TrackEventKind::Midi {
+                        channel: Self::DEFAULT_CHANNEL,
+                        message: MidiMessage::NoteOff {
+                            key: note.into(),
+                            vel: Self::DEFAULT_VELOCITY,
+                        },
+                    },
+                });
             }
-            MIDIaction::ChangeInstrument(_) => todo!(),
-            MIDIaction::ChangeVolume(_) => todo!(),
-            MIDIaction::ChangeOctave(_) => todo!(),
-            MIDIaction::ChangeBPM(_) => todo!(),
-            MIDIaction::Pause => todo!(),
+            MIDIaction::ChangeInstrument(instrument) => {
+                vec.push(TrackEvent {
+                    delta: Self::INSTANT,
+                    kind: TrackEventKind::Midi {
+                        channel: Self::DEFAULT_CHANNEL,
+                        message: MidiMessage::ProgramChange {
+                            program: u7::from_int_lossy(instrument),
+                        },
+                    },
+                });
+            }
+            MIDIaction::ChangeVolume(volume) => vec.push(TrackEvent {
+                delta: Self::INSTANT,
+                kind: TrackEventKind::Midi {
+                    channel: Self::DEFAULT_CHANNEL,
+                    message: MidiMessage::Controller {
+                        controller: u7::from_int_lossy(midi_msg::ControlNumber::Volume as u8),
+                        value: u7::from_int_lossy(volume),
+                    },
+                },
+            }),
+            MIDIaction::Pause(bpm) => {
+                vec.push(TrackEvent {
+                    delta: Self::INSTANT,
+                    kind: TrackEventKind::Midi {
+                        channel: Self::DEFAULT_CHANNEL,
+                        message: MidiMessage::Controller {
+                            controller: u7::from_int_lossy(0x7B),
+                            value: u7::from_int_lossy(0),
+                        },
+                    },
+                });
+                vec.push(TrackEvent {
+                    delta: u28::from_int_lossy(bpm),
+                    kind: TrackEventKind::Midi {
+                        channel: Self::DEFAULT_CHANNEL,
+                        message: MidiMessage::Controller {
+                            controller: u7::from_int_lossy(0x7B),
+                            value: u7::from_int_lossy(0),
+                        },
+                    },
+                });
+            }
         };
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use midi_msg::MidiMsg;
+    use midly::{Track, TrackEventKind, num::*};
+
+    use super::MIDIaction;
+
+    #[test]
+    fn change_instrument() {
+        // Arrange
+        let correct = TrackEventKind::Midi {
+            channel: u4::from_int_lossy(0),
+            message: midly::MidiMessage::ProgramChange {
+                program: u7::from_int_lossy(0),
+            },
+        };
+
+        let mut midi_vec = Track::new();
+        MIDIaction::ChangeInstrument(0).to_events(&mut midi_vec);
+
+        // Assert
+        assert_eq!(correct, midi_vec[0].kind);
     }
 }
