@@ -9,18 +9,19 @@ pub enum MIDIaction {
     ChangeInstrument(u8),
     ChangeVolume(u8),
     Pause(u32),
+    ChangeBPM(u8),
+    EndTrack,
 }
 
 impl MIDIaction {
-    const DEFAULT_TRACK: usize = 0;
     const DEFAULT_CHANNEL: u4 = u4::from_int_lossy(0);
     const DEFAULT_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
     const INSTANT: u28 = u28::from_int_lossy(0);
 
-    pub fn to_events(self, vec: &mut Track) {
+    pub fn to_events(self, track: &mut Track) {
         match self {
             MIDIaction::PlayNote { bpm, note } => {
-                vec.push(TrackEvent {
+                track.push(TrackEvent {
                     delta: 0.into(),
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
@@ -30,7 +31,7 @@ impl MIDIaction {
                         },
                     },
                 });
-                vec.push(TrackEvent {
+                track.push(TrackEvent {
                     delta: u28::from_int_lossy(bpm),
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
@@ -42,7 +43,7 @@ impl MIDIaction {
                 });
             }
             MIDIaction::ChangeInstrument(instrument) => {
-                vec.push(TrackEvent {
+                track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
@@ -52,7 +53,7 @@ impl MIDIaction {
                     },
                 });
             }
-            MIDIaction::ChangeVolume(volume) => vec.push(TrackEvent {
+            MIDIaction::ChangeVolume(volume) => track.push(TrackEvent {
                 delta: Self::INSTANT,
                 kind: TrackEventKind::Midi {
                     channel: Self::DEFAULT_CHANNEL,
@@ -63,7 +64,7 @@ impl MIDIaction {
                 },
             }),
             MIDIaction::Pause(bpm) => {
-                vec.push(TrackEvent {
+                track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
@@ -73,7 +74,7 @@ impl MIDIaction {
                         },
                     },
                 });
-                vec.push(TrackEvent {
+                track.push(TrackEvent {
                     delta: u28::from_int_lossy(bpm),
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
@@ -84,14 +85,24 @@ impl MIDIaction {
                     },
                 });
             }
+            MIDIaction::ChangeBPM(bpm) => {
+                track.push(TrackEvent {
+                    delta: u28::default(),
+                    kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(bpm_into_micros(bpm))),
+                });
+            }
+            MIDIaction::EndTrack => track.push(TrackEvent {
+                delta: u28::default(),
+                kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
+            }),
         };
     }
 }
 
 #[cfg(test)]
 mod test {
-    use midi_msg::MidiMsg;
-    use midly::{Track, TrackEventKind, num::*};
+
+    use midly::{num::*, Track, TrackEventKind};
 
     use super::MIDIaction;
 
