@@ -1,9 +1,11 @@
+use apres::MIDI;
 use midi_msg::MidiMsg;
 
 use crate::midi_action::MIDIaction;
 
 /// Enum com as notas possíveis.
 #[derive(Clone, Copy)]
+#[repr(u8)]
 pub enum Note {
     /// Nota dó.
     Do,
@@ -19,8 +21,6 @@ pub enum Note {
     La,
     /// Nota si.
     Si,
-    /// Representa uma ação
-    Action,
 }
 
 impl Note {
@@ -34,7 +34,6 @@ impl Note {
             'E' | 'e' => Some(Note::Mi),
             'F' | 'f' => Some(Note::Fa),
             'G' | 'g' => Some(Note::Sol),
-            ' ' => Some(Note::Pause),
             _ => None,
         }
     }
@@ -48,15 +47,17 @@ impl Default for Note {
 
 /// Estrutura que guarda o estado atual da música.
 #[derive(Clone, Copy)]
-struct State {
+pub struct State {
+    /// BPM
+    pub bpm: u8,
     /// O instrumento atual.
-    instrument: u8,
+    pub instrument: u8,
     /// A oitava atual.
-    octave: u8,
+    pub octave: u8,
     /// O volume atual.
-    volume: u16,
+    pub volume: u16,
     /// A nota atual.
-    note: Note,
+    pub note: Option<Note>,
 }
 
 impl State {
@@ -69,13 +70,16 @@ impl State {
 
     pub const MAX_VOLUME: u16 = 16383;
 
+    pub const DEFAULT_BPM: u8 = 80;
+
     /// Cria um estado novo.
-    pub fn new(instrument: u8, octave: u8, volume: u16, note: Note) -> Self {
+    pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u8, note: Note) -> Self {
         Self {
             instrument,
             octave,
             volume,
-            note,
+            bpm,
+            note: Some(note),
         }
     }
 }
@@ -86,6 +90,7 @@ impl Default for State {
             instrument: 1,
             octave: State::DEFAULT_OCTAVE,
             volume: State::DEFAULT_VOLUME,
+            bpm: State::DEFAULT_BPM,
             note: Default::default(),
         }
     }
@@ -119,40 +124,46 @@ impl Sheet {
         todo!()
     }
 
+    pub fn into_bytes(actions: Vec<MIDIaction>) -> MIDI
+    {
+        let mut ret = MIDI::new();
+
+        
+
+        return ret;
+    }
+
     /// Altera o current_state e coloca no fim do vetor
     fn parse_char(&mut self, ch: char) {
         // ABCDEFG
         let new_note: Option<Note> = Note::from_char(ch);
         if let Some(note) = new_note {
-            self.current_state.note = note;
+            self.current_state.note = Some(note);
             return;
+        }
+        else {
+            self.current_state.note = None;
         }
 
         match ch {
-            
             '+' => {
                 // Aumenta volume para o DOBRO do volume; Se não puder aumentar, volta ao volume default (de início)
-                self.current_state.volume = if (self.current_state.volume * 2 > State::MAX_VOLUME) {
+                self.current_state.volume = if self.current_state.volume * 2 > State::MAX_VOLUME {
                     State::MAX_VOLUME
                 } else {
                     self.current_state.volume * 2
                 };
-
-                self.current_state.note = Note::Action;
             }
             '-' => {
-                // Volume retorna ao volume default
-                self.current_state.volume =  State::DEFAULT_VOLUME;
-                
-                self.current_state.note = Note::Action;
+                // Volume retorna ao volume padrão
+                self.current_state.volume = State::DEFAULT_VOLUME;
             }
-            
+
             '0'..='9' => {
                 // Trocar instrumento para o instrumento General MIDI cujo numero é igual ao valor do instrumento ATUAL + valor do dígito
                 if let Some(n) = ch.to_digit(10) {
                     self.current_state.instrument += n as u8;
                 }
-                self.current_state.note = Note::Pause;
             }
             '.' | '?' => {
                 // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
@@ -162,27 +173,22 @@ impl Sheet {
                 } else {
                     new_octave
                 };
-                self.current_state.note = Note::Pause;
             }
             '!' => {
                 // Trocar instrumento para o instrumento General MIDI #114 (Agogo)
                 self.current_state.instrument = 114;
-                self.current_state.note = Note::Pause;
             }
             '\n' => {
                 // Trocar instrumento para o instrumento General MIDI #15 (Tubular Bells)
                 self.current_state.instrument = 15;
-                self.current_state.note = Note::Pause;
             }
             ';' => {
                 // Trocar instrumento para o instrumento General MIDI #76 (Pan Flute)
                 self.current_state.instrument = 76;
-                self.current_state.note = Note::Pause;
             }
             ',' => {
                 // Trocar instrumento para o instrumento General MIDI #20 (Church Organ)
                 self.current_state.instrument = 20;
-                self.current_state.note = Note::Pause;
             }
             _ => {
                 todo!();

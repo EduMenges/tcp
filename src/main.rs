@@ -13,7 +13,7 @@ use midir::{MidiOutput, MidiOutputPort};
 
 fn main() {
     let mut ctx = ReceiverContext::new();
-    let bytes = fs::read("twinkle.mid").unwrap();
+    let bytes = fs::read("oitavas.mid").unwrap();
     let (msg, len) = MidiMsg::from_midi_with_context(&bytes, &mut ctx).unwrap();
 }
 
