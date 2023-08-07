@@ -1,5 +1,9 @@
 use midi_msg::MidiMsg;
 use midly::{num::*, Header, MetaMessage, Smf, Track, TrackEvent};
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
 
 use crate::midi_action::MIDIaction;
 
@@ -21,6 +25,22 @@ pub enum Note {
     La,
     /// Nota si.
     Si,
+    /// Nota pause.
+    Pause,
+}
+
+impl Distribution<Note> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Note {
+        match rng.gen_range(0..=6) {
+            0 => Note::Do,
+            1 => Note::Re,
+            2 => Note::Mi,
+            3 => Note::Fa,
+            4 => Note::Sol,
+            5 => Note::La,
+            _ => Note::Si,
+        }
+    }
 }
 
 impl Note {
@@ -34,6 +54,7 @@ impl Note {
             'E' | 'e' => Some(Note::Mi),
             'F' | 'f' => Some(Note::Fa),
             'G' | 'g' => Some(Note::Sol),
+            ' ' => Some(Note::Pause),
             _ => None,
         }
     }
@@ -72,6 +93,8 @@ impl State {
 
     pub const DEFAULT_BPM: u8 = 80;
 
+    pub const MAX_BPM: u8 = 255;
+
     pub const MICROSECS_IN_MINUTE: u32 = 60_000_000;
 
     /// Cria um estado novo.
@@ -97,7 +120,7 @@ pub fn bpm_into_micros(bpm: u8) -> u24 {
 impl Default for State {
     fn default() -> Self {
         Self {
-            instrument: 1,
+            instrument: 0,
             octave: State::DEFAULT_OCTAVE,
             volume: State::DEFAULT_VOLUME,
             bpm: State::DEFAULT_BPM,
@@ -119,6 +142,9 @@ pub struct Sheet {
 }
 
 impl Sheet {
+    const DEFAULT_R_PLUS: char = '東';
+    const DEFAULT_R_MINUS: char = '世';
+    const DEFAULT_BPM_PLUS: char = 'ß';
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u8, text: String) -> Self {
         Self {
@@ -133,8 +159,14 @@ impl Sheet {
     pub fn proccess(self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
         ret.push(MIDIaction::EndTrack);
-        todo!();
-        return ret;
+        
+        self.current_state = self.states.first().unwrap().clone();
+        ret.push(MIDIaction::ChangeBPM((self.current_state.bpm)));
+        ret.push(MIDIaction::ChangeInstrument((self.current_state.instrument)));
+        ret.push(MIDIaction::ChangeVolume((self.current_state.volume as u8)));
+
+
+        ret;
     }
 
     pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {
@@ -154,8 +186,33 @@ impl Sheet {
         smf
     }
 
+    pub fn proccess_text(&mut self) {
+        let processed_text = self
+            .text
+            .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
+            .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
+            .replace("R-", &Sheet::DEFAULT_R_MINUS.to_string());
+
+        let mut prev_char = '\0';
+
+        for c in processed_text.chars() {
+            if let Some(new_note) = Note::from_char(prev_char) {
+                if matches!(c, 'o' | 'O' | 'I' | 'i' | 'u' | 'U') {
+                    self.parse_char(prev_char);
+                    prev_char = c;
+                    continue;
+                }
+            }
+            self.parse_char(c);
+            prev_char = c;
+        }
+    }
+
     /// Altera o current_state e coloca no fim do vetor
     fn parse_char(&mut self, ch: char) {
+        print!("{}", ch);
+        //let ch = self.text.chars().nth(index).unwrap();
+
         // ABCDEFG
         let new_note: Option<Note> = Note::from_char(ch);
         if let Some(note) = new_note {
@@ -179,13 +236,13 @@ impl Sheet {
                 self.current_state.volume = State::DEFAULT_VOLUME;
             }
 
-            '0'..='9' => {
-                // Trocar instrumento para o instrumento General MIDI cujo numero é igual ao valor do instrumento ATUAL + valor do dígito
-                if let Some(n) = ch.to_digit(10) {
-                    self.current_state.instrument += n as u8;
-                }
+            'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
+                // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
+                self.current_state.instrument = 125;
             }
-            '.' | '?' => {
+
+            //R+
+            Sheet::DEFAULT_R_PLUS => {
                 // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                 let new_octave = self.current_state.octave + 1;
                 self.current_state.octave = if new_octave > State::MAX_OCTAVE {
@@ -194,25 +251,37 @@ impl Sheet {
                     new_octave
                 };
             }
-            '!' => {
-                // Trocar instrumento para o instrumento General MIDI #114 (Agogo)
-                self.current_state.instrument = 114;
+
+            //R-
+            Sheet::DEFAULT_R_MINUS => {
+                // Diminui UMA oitava;
+                self.current_state.octave = self.current_state.octave.saturating_sub(1);
             }
+            //BPM+
+            Sheet::DEFAULT_BPM_PLUS => {
+                // Aumenta BPM em 80 unidades
+                self.current_state.bpm = self.current_state.bpm.saturating_add(80);
+            }
+
+            '?' => {
+                //Toca uma nota aleatória (de A a G), randomicamente escolhida
+                let mut rng = rand::thread_rng();
+                let random_note: Note = rng.gen();
+                self.current_state.note = Some(random_note);
+            }
+
             '\n' => {
-                // Trocar instrumento para o instrumento General MIDI #15 (Tubular Bells)
-                self.current_state.instrument = 15;
+                //Trocar instrumento aleatorio
+                let mut rng = rand::thread_rng();
+                self.current_state.instrument = rng.gen_range(0..=i8::MAX as u8);
             }
+
             ';' => {
-                // Trocar instrumento para o instrumento General MIDI #76 (Pan Flute)
-                self.current_state.instrument = 76;
+                //Atribui valor aleatorio ao BPM
+                let mut rng = rand::thread_rng();
+                self.current_state.bpm = rng.gen_range(1..State::MAX_BPM);
             }
-            ',' => {
-                // Trocar instrumento para o instrumento General MIDI #20 (Church Organ)
-                self.current_state.instrument = 20;
-            }
-            _ => {
-                todo!();
-            }
+            _ => {}
         }
 
         self.states.push(self.current_state);
