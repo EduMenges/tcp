@@ -120,7 +120,7 @@ pub fn bpm_into_micros(bpm: u8) -> u24 {
 impl Default for State {
     fn default() -> Self {
         Self {
-            instrument: 1,
+            instrument: 0,
             octave: State::DEFAULT_OCTAVE,
             volume: State::DEFAULT_VOLUME,
             bpm: State::DEFAULT_BPM,
@@ -159,8 +159,13 @@ impl Sheet {
     pub fn proccess(self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
         ret.push(MIDIaction::EndTrack);
-        todo!();
         
+        self.current_state = self.states.first().unwrap().clone();
+        ret.push(MIDIaction::ChangeBPM((self.current_state.bpm)));
+        ret.push(MIDIaction::ChangeInstrument((self.current_state.instrument)));
+        ret.push(MIDIaction::ChangeVolume((self.current_state.volume as u8)));
+
+
         ret;
     }
 
