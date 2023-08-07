@@ -25,6 +25,8 @@ pub enum Note {
     La,
     /// Nota si.
     Si,
+    /// Nota pause.
+    Pause,
 }
 
 impl Distribution<Note> for Standard {
@@ -52,6 +54,7 @@ impl Note {
             'E' | 'e' => Some(Note::Mi),
             'F' | 'f' => Some(Note::Fa),
             'G' | 'g' => Some(Note::Sol),
+            ' ' => Some(Note::Pause),
             _ => None,
         }
     }
@@ -140,7 +143,7 @@ pub struct Sheet {
 
 impl Sheet {
     const DEFAULT_R_PLUS: char = '東';
-    const DEFAULT_R_MINUS: char = '東';
+    const DEFAULT_R_MINUS: char = '世';
     const DEFAULT_BPM_PLUS: char = 'ß';
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u8, text: String) -> Self {
@@ -157,7 +160,8 @@ impl Sheet {
         let mut ret = Vec::<MIDIaction>::new();
         ret.push(MIDIaction::EndTrack);
         todo!();
-        return ret;
+        
+        ret;
     }
 
     pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {
@@ -178,17 +182,19 @@ impl Sheet {
     }
 
     pub fn proccess_text(&mut self) {
-        let processed_text = self.text
+        let processed_text = self
+            .text
             .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
             .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
             .replace("R-", &Sheet::DEFAULT_R_MINUS.to_string());
 
         let mut prev_char = '\0';
-       
+
         for c in processed_text.chars() {
             if let Some(new_note) = Note::from_char(prev_char) {
                 if matches!(c, 'o' | 'O' | 'I' | 'i' | 'u' | 'U') {
                     self.parse_char(prev_char);
+                    prev_char = c;
                     continue;
                 }
             }
@@ -199,6 +205,7 @@ impl Sheet {
 
     /// Altera o current_state e coloca no fim do vetor
     fn parse_char(&mut self, ch: char) {
+        print!("{}", ch);
         //let ch = self.text.chars().nth(index).unwrap();
 
         // ABCDEFG
@@ -243,17 +250,12 @@ impl Sheet {
             //R-
             Sheet::DEFAULT_R_MINUS => {
                 // Diminui UMA oitava;
-                self.current_state.octave -= 1;
+                self.current_state.octave = self.current_state.octave.saturating_sub(1);
             }
             //BPM+
             Sheet::DEFAULT_BPM_PLUS => {
                 // Aumenta BPM em 80 unidades
-                self.current_state.bpm += 80;
-                self.current_state.bpm = if self.current_state.bpm + 80 > State::MAX_BPM {
-                    State::MAX_BPM
-                } else {
-                    self.current_state.bpm + 80
-                };
+                self.current_state.bpm = self.current_state.bpm.saturating_add(80);
             }
 
             '?' => {

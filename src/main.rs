@@ -10,14 +10,23 @@ use std::error::Error;
 
 use midi_msg::{MidiMsg, ReceiverContext};
 use midir::{MidiOutput, MidiOutputPort};
+use text_to_midi::Sheet;
 
 fn main() {
+    /* 
     let mut ctx = ReceiverContext::new();
     let bytes = fs::read("oitavas.mid").unwrap();
     let (msg, len) = MidiMsg::from_midi_with_context(&bytes, &mut ctx).unwrap();
+    */
+    let text = "ABPM+ER+AooEeiR-E;? iBPM+aeioUUGr+R-R-R-R-R-R-R-R-R-R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+R+".to_string();
+    
+    let mut sheet = Sheet::new(100, text);
+    sheet.proccess_text();
 }
 
 fn run() -> Result<(), Box<dyn Error>> {
+    
+    
     let midi_out = MidiOutput::new("My Test Output")?;
     
     // Get an output port (read from console if multiple are available)
