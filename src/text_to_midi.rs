@@ -95,8 +95,6 @@ impl State {
 
     pub const MAX_BPM: u8 = 255;
 
-    pub const MICROSECS_IN_MINUTE: u32 = 60_000_000;
-
     /// Cria um estado novo.
     pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u8, note: Note) -> Self {
         Self {
@@ -114,7 +112,8 @@ impl State {
 }
 
 pub fn bpm_into_micros(bpm: u8) -> u24 {
-    u24::from_int_lossy(State::MICROSECS_IN_MINUTE / bpm as u32)
+    pub const MICROSECS_IN_MINUTE: u32 = 60_000_000;
+    u24::from_int_lossy(MICROSECS_IN_MINUTE / bpm as u32)
 }
 
 impl Default for State {
@@ -145,6 +144,9 @@ impl Sheet {
     const DEFAULT_R_PLUS: char = '東';
     const DEFAULT_R_MINUS: char = '世';
     const DEFAULT_BPM_PLUS: char = 'ß';
+    /// Pulses Per Quarter Note
+    const DEFAULT_PPQN: u16 = 480;
+
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u8, text: String) -> Self {
         Self {
@@ -159,12 +161,13 @@ impl Sheet {
     pub fn proccess(self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
         ret.push(MIDIaction::EndTrack);
-        
+
         self.current_state = self.states.first().unwrap().clone();
         ret.push(MIDIaction::ChangeBPM((self.current_state.bpm)));
-        ret.push(MIDIaction::ChangeInstrument((self.current_state.instrument)));
+        ret.push(MIDIaction::ChangeInstrument(
+            (self.current_state.instrument),
+        ));
         ret.push(MIDIaction::ChangeVolume((self.current_state.volume as u8)));
-
 
         ret;
     }
@@ -172,7 +175,7 @@ impl Sheet {
     pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {
         let header: Header = Header {
             format: midly::Format::SingleTrack,
-            timing: midly::Timing::Metrical(u15::from_int_lossy(480)),
+            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::DEFAULT_PPQN)),
         };
         let mut smf = Smf::new(header);
 
