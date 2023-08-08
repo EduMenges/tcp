@@ -54,9 +54,9 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
         midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding are necessary"),
     };
 
-    let mut current_mspqn: u24;
+    let mut current_mspqn: u24 = u24::default();
 
-    for event in file.tracks[0] {
+    for event in &file.tracks[0] {
         if event.delta > 0 {
             sleep(Duration::from_micros(ticks_to_micros(
                 event.delta,
@@ -66,7 +66,7 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
         }
         match event.kind.as_live_event() {
             Some(event) => {
-                event.write_std(buf);
+                event.write_std(&mut buf);
                 conn_out.send(&buf);
             }
             None => {
