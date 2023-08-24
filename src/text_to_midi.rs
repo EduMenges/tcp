@@ -158,7 +158,7 @@ impl Sheet {
     }
 
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
-    pub fn proccess(self) -> Vec<MIDIaction> {
+    pub fn proccess(mut self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
 
         self.current_state = self.states.first().unwrap().clone();
@@ -179,7 +179,7 @@ impl Sheet {
                 match actualState.note{
                     Some(N) => {
                         match N{
-                            Pause => {
+                            Note::Pause => {
                                 ret.push(MIDIaction::Pause (actualState.bpm as u32));
                             },
                             _ => {
