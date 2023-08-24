@@ -159,10 +159,11 @@ impl Sheet {
     pub fn process(mut self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
 
-        self.current_state = self.states.first().unwrap().clone();
+        self.current_state = self.states[0];
         ret.push(MIDIaction::ChangeBPM(self.current_state.bpm));
         ret.push(MIDIaction::ChangeInstrument(self.current_state.instrument));
         ret.push(MIDIaction::ChangeVolume(self.current_state.volume));
+
         for actual_state in self.states {
             if actual_state.bpm != self.current_state.bpm {
                 ret.push(MIDIaction::ChangeBPM(actual_state.bpm));
@@ -179,7 +180,7 @@ impl Sheet {
                         _ => {
                             ret.push(MIDIaction::PlayNote {
                                 bpm: actual_state.bpm as u32,
-                                note: (N as u8) * actual_state.octave,
+                                note: (N as u8) + 8 * actual_state.octave,
                             });
                         }
                     },
@@ -188,7 +189,9 @@ impl Sheet {
             }
             self.current_state = actual_state;
         }
+
         ret.push(MIDIaction::EndTrack);
+        
         ret
     }
 
@@ -287,7 +290,7 @@ impl Sheet {
                 _ => {}
             }
         }
-        
+
         self.states.push(self.current_state);
     }
 }
