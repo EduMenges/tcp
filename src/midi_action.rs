@@ -38,11 +38,11 @@ impl MIDIaction {
         smf
     }
 
-    pub fn to_events(self, track: &mut Track) {
+    pub fn push_as_event(self, track: &mut Track) {
         match self {
             MIDIaction::PlayNote { bpm, note } => {
                 track.push(TrackEvent {
-                    delta: 0.into(),
+                    delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
                         message: MidiMessage::NoteOn {
@@ -137,7 +137,7 @@ mod test {
         };
 
         let mut midi_vec = Track::new();
-        MIDIaction::ChangeInstrument(0).to_events(&mut midi_vec);
+        MIDIaction::ChangeInstrument(0).push_as_event(&mut midi_vec);
 
         // Assert
         assert_eq!(correct, midi_vec[0].kind);
