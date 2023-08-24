@@ -160,16 +160,40 @@ impl Sheet {
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
     pub fn proccess(self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
-        ret.push(MIDIaction::EndTrack);
 
         self.current_state = self.states.first().unwrap().clone();
-        ret.push(MIDIaction::ChangeBPM((self.current_state.bpm)));
-        ret.push(MIDIaction::ChangeInstrument(
-            (self.current_state.instrument),
-        ));
-        ret.push(MIDIaction::ChangeVolume((self.current_state.volume as u8)));
-
-        ret;
+        ret.push(MIDIaction::ChangeBPM(self.current_state.bpm));
+        ret.push(MIDIaction::ChangeInstrument(self.current_state.instrument));
+        ret.push(MIDIaction::ChangeVolume(self.current_state.volume));
+        for actualState in self.states {
+            if actualState.bpm != self.current_state.bpm {
+                ret.push(MIDIaction::ChangeBPM(actualState.bpm));
+            }
+            else if actualState.instrument != self.current_state.instrument {
+                ret.push(MIDIaction::ChangeInstrument(actualState.instrument));
+            }
+            else if actualState.volume != self.current_state.volume {
+                ret.push(MIDIaction::ChangeVolume(actualState.volume));
+            }
+            else {
+                match actualState.note{
+                    Some(N) => {
+                        match N{
+                            Pause => {
+                                ret.push(MIDIaction::Pause (actualState.bpm as u32));
+                            },
+                            _ => {
+                                ret.push(MIDIaction::PlayNote{bpm: actualState.bpm as u32, note: (N as u8) * actualState.octave});
+                            },
+                        }
+                    },
+                    None => (),
+                }
+            }
+            self.current_state = actualState;
+        }
+        ret.push(MIDIaction::EndTrack);
+        ret
     }
 
     pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {

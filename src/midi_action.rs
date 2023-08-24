@@ -7,7 +7,7 @@ use midly::{num::*, *};
 pub enum MIDIaction {
     PlayNote { bpm: u32, note: u8 },
     ChangeInstrument(u8),
-    ChangeVolume(u8),
+    ChangeVolume(u16),
     Pause(u32),
     ChangeBPM(u8),
     EndTrack,
@@ -59,7 +59,7 @@ impl MIDIaction {
                     channel: Self::DEFAULT_CHANNEL,
                     message: MidiMessage::Controller {
                         controller: u7::from_int_lossy(midi_msg::ControlNumber::Volume as u8),
-                        value: u7::from_int_lossy(volume),
+                        value: u7::from_int_lossy(volume as u8),
                     },
                 },
             }),
