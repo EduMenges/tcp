@@ -103,6 +103,7 @@ mod test {
         let mut test = text_to_midi::Sheet::new(120, "CDEFGAB");
         test.process_text();
         let actions = test.process();
+        
         let _ = play_file(&MIDIaction::to_track(&actions));
     }
 }
