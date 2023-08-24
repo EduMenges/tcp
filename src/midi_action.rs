@@ -16,7 +16,27 @@ pub enum MIDIaction {
 impl MIDIaction {
     const DEFAULT_CHANNEL: u4 = u4::from_int_lossy(0);
     const DEFAULT_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
+    /// Instant delta
     const INSTANT: u28 = u28::from_int_lossy(0);
+    /// Pulses Per Quarter Note
+    const DEFAULT_PPQN: u16 = 480;
+
+    pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
+        let header: Header = Header {
+            format: midly::Format::SingleTrack,
+            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::DEFAULT_PPQN)),
+        };
+        let mut smf = Smf::new(header);
+
+        let mut track = Track::new();
+
+        for action in slice {
+            action.push_as_event(&mut track)
+        }
+
+        smf.tracks.push(track);
+        smf
+    }
 
     pub fn to_events(self, track: &mut Track) {
         match self {
