@@ -45,7 +45,7 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
     };
 
     println!("\nOpening connection");
-    let mut conn_out = midi_out.connect(out_port, "midir-test")?;
+    let mut conn_out = midi_out.connect(out_port, "midir")?;
     println!("Connection open. Listen!");
 
     let mut buf = Vec::new();
@@ -92,7 +92,14 @@ mod test {
     use super::*;
 
     #[test]
-    fn from_file() {
+    fn from_empty_midi() {
+        let smf = Smf::parse(include_bytes!("../test-asset/empty.mid")).unwrap();
+
+        let _ = play_file(&smf);
+    }
+
+    #[test]
+    fn from_real_file() {
         let smf = Smf::parse(include_bytes!("../test-asset/twinkle.mid")).unwrap();
 
         let _ = play_file(&smf);
