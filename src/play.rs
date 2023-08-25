@@ -45,7 +45,7 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
     };
 
     println!("\nOpening connection");
-    let mut conn_out = midi_out.connect(out_port, "midir-test")?;
+    let mut conn_out = midi_out.connect(out_port, "midir")?;
     println!("Connection open. Listen!");
 
     let mut buf = Vec::new();
@@ -54,9 +54,9 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
         midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding are necessary"),
     };
 
-    let mut current_mspqn: u24 = u24::default();
+    let mut current_mspqn: u24 = Default::default();
 
-    for event in &file.tracks[0] {
+    for event in file.tracks[0].iter() {
         if event.delta > 0 {
             sleep(Duration::from_micros(ticks_to_micros(
                 event.delta,
@@ -66,8 +66,8 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
         }
         match event.kind.as_live_event() {
             Some(event) => {
-                event.write_std(&mut buf);
-                conn_out.send(&buf);
+                let _ = event.write(&mut buf);
+                let _ = conn_out.send(&buf);
             }
             None => {
                 if let midly::TrackEventKind::Meta(midly::MetaMessage::Tempo(mspqn)) = event.kind {
@@ -75,12 +75,42 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+        buf.clear();
+        println!("{}", buf.capacity())
     }
 
     sleep(Duration::from_millis(150));
     println!("\nClosing connection");
-    // This is optional, the connection would automatically be closed as soon as it goes out of scope
-    conn_out.close();
-    println!("Connection closed");
+
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{text_to_midi, midi_action::MIDIaction};
+
+    use super::*;
+
+    #[test]
+    fn from_empty_midi() {
+        let smf = Smf::parse(include_bytes!("../test-asset/empty.mid")).unwrap();
+
+        let _ = play_file(&smf);
+    }
+
+    #[test]
+    fn from_real_file() {
+        let smf = Smf::parse(include_bytes!("../test-asset/twinkle.mid")).unwrap();
+
+        let _ = play_file(&smf);
+    }
+
+    #[test]
+    fn from_ours() {
+        let mut test = text_to_midi::Sheet::new(120, "CDEFGAB");
+        test.process_text();
+        let actions = test.process();
+        
+        let _ = play_file(&MIDIaction::to_track(&actions));
+    }
 }

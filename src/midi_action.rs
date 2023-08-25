@@ -7,7 +7,7 @@ use midly::{num::*, *};
 pub enum MIDIaction {
     PlayNote { bpm: u32, note: u8 },
     ChangeInstrument(u8),
-    ChangeVolume(u8),
+    ChangeVolume(u16),
     Pause(u32),
     ChangeBPM(u8),
     EndTrack,
@@ -16,13 +16,33 @@ pub enum MIDIaction {
 impl MIDIaction {
     const DEFAULT_CHANNEL: u4 = u4::from_int_lossy(0);
     const DEFAULT_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
+    /// Instant delta
     const INSTANT: u28 = u28::from_int_lossy(0);
+    /// Pulses Per Quarter Note
+    const DEFAULT_PPQN: u16 = 480;
 
-    pub fn to_events(self, track: &mut Track) {
+    pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
+        let header: Header = Header {
+            format: midly::Format::SingleTrack,
+            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::DEFAULT_PPQN)),
+        };
+        let mut smf = Smf::new(header);
+
+        let mut track = Track::new();
+
+        for action in slice {
+            action.push_as_event(&mut track)
+        }
+
+        smf.tracks.push(track);
+        smf
+    }
+
+    pub fn push_as_event(self, track: &mut Track) {
         match self {
             MIDIaction::PlayNote { bpm, note } => {
                 track.push(TrackEvent {
-                    delta: 0.into(),
+                    delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
                         message: MidiMessage::NoteOn {
@@ -59,7 +79,7 @@ impl MIDIaction {
                     channel: Self::DEFAULT_CHANNEL,
                     message: MidiMessage::Controller {
                         controller: u7::from_int_lossy(midi_msg::ControlNumber::Volume as u8),
-                        value: u7::from_int_lossy(volume),
+                        value: u7::from_int_lossy(volume as u8),
                     },
                 },
             }),
@@ -117,7 +137,7 @@ mod test {
         };
 
         let mut midi_vec = Track::new();
-        MIDIaction::ChangeInstrument(0).to_events(&mut midi_vec);
+        MIDIaction::ChangeInstrument(0).push_as_event(&mut midi_vec);
 
         // Assert
         assert_eq!(correct, midi_vec[0].kind);

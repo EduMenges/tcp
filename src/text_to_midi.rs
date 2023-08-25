@@ -146,52 +146,60 @@ impl Sheet {
     const DEFAULT_R_PLUS: char = '東';
     const DEFAULT_R_MINUS: char = '世';
     const DEFAULT_BPM_PLUS: char = 'ß';
-    /// Pulses Per Quarter Note
-    const DEFAULT_PPQN: u16 = 480;
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
-    pub fn new(bpm: u8, text: String) -> Self {
+    pub fn new(bpm: u8, text: impl ToString) -> Self {
         Self {
             bpm,
             states: Vec::new(),
-            text,
+            text: text.to_string(),
             current_state: Default::default(),
         }
     }
 
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
-    pub fn proccess(self) -> Vec<MIDIaction> {
+    pub fn process(mut self) -> Vec<MIDIaction> {
         let mut ret = Vec::<MIDIaction>::new();
-        ret.push(MIDIaction::EndTrack);
-        todo!();
-        self.current_state = self.states.first().unwrap().clone();
-        ret.push(MIDIaction::ChangeBPM((self.current_state.bpm)));
-        ret.push(MIDIaction::ChangeInstrument(
-            (self.current_state.instrument),
-        ));
-        ret.push(MIDIaction::ChangeVolume((self.current_state.volume as u8)));
 
-        ret;
-    }
+        self.current_state = self.states[0];
+        ret.push(MIDIaction::ChangeBPM(self.current_state.bpm));
+        ret.push(MIDIaction::ChangeInstrument(self.current_state.instrument));
+        ret.push(MIDIaction::ChangeVolume(self.current_state.volume));
 
-    pub fn into_bytes<'a>(actions: Vec<MIDIaction>) -> Smf<'a> {
-        let header: Header = Header {
-            format: midly::Format::SingleTrack,
-            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::DEFAULT_PPQN)),
-        };
-        let mut smf = Smf::new(header);
-
-        let mut track = Track::new();
-
-        for action in actions {
-            action.to_events(&mut track)
+        for actual_state in self.states {
+            if actual_state.bpm != self.current_state.bpm {
+                ret.push(MIDIaction::ChangeBPM(actual_state.bpm));
+            } else if actual_state.instrument != self.current_state.instrument {
+                ret.push(MIDIaction::ChangeInstrument(actual_state.instrument));
+            } else if actual_state.volume != self.current_state.volume {
+                ret.push(MIDIaction::ChangeVolume(actual_state.volume));
+            } else {
+                match actual_state.note {
+                    Some(N) => match N {
+                        Note::Pause => {
+                            ret.push(MIDIaction::Pause(actual_state.bpm as u32));
+                        }
+                        _ => {
+                            ret.push(MIDIaction::PlayNote {
+                                bpm: actual_state.bpm as u32,
+                                note: (N as u8) + 8 * actual_state.octave,
+                            });
+                        }
+                    },
+                    None => (),
+                }
+            }
+            self.current_state = actual_state;
         }
 
-        smf.tracks.push(track);
-        smf
+        ret.push(MIDIaction::EndTrack);
+        
+        ret
     }
+  
     pub fn map_substring_to_char(&mut self) -> String {
         let mut text = self
+      
             .text
             .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
             .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
@@ -226,32 +234,27 @@ impl Sheet {
     /// Altera o current_state e coloca no fim do vetor
     fn parse_char(&mut self, ch: char) {
         print!("{}", ch);
-        //let ch = self.text.chars().nth(index).unwrap();
 
         // ABCDEFG
         let new_note: Option<Note> = Note::from_char(ch);
         if let Some(note) = new_note {
             self.current_state.note = Some(note);
-            self.states.push(self.current_state);
-            return;
         } else {
             self.current_state.note = None;
-        }
-
-        match ch {
-            '+' => {
-                // Aumenta volume para o DOBRO do volume; Se não puder aumentar, volta ao volume default (de início)
-                self.current_state.volume = if self.current_state.volume * 2 > State::MAX_VOLUME {
-                    State::MAX_VOLUME
-                } else {
-                    self.current_state.volume * 2
-                };
-            }
-            '-' => {
-                // Volume retorna ao volume padrão
-                self.current_state.volume = State::DEFAULT_VOLUME;
-            }
-
+            match ch {
+                '+' => {
+                    // Aumenta volume para o DOBRO do volume; Se não puder aumentar, volta ao volume default (de início)
+                    self.current_state.volume = if self.current_state.volume * 2 > State::MAX_VOLUME
+                    {
+                        State::MAX_VOLUME
+                    } else {
+                        self.current_state.volume * 2
+                    };
+                }
+                '-' => {
+                    // Volume retorna ao volume padrão
+                    self.current_state.volume = State::DEFAULT_VOLUME;
+                }
             'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
                 // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
                 self.current_state.instrument = 125;
@@ -261,47 +264,48 @@ impl Sheet {
                 self.current_state = aux_state;
             }
 
-            //R+
-            Sheet::DEFAULT_R_PLUS => {
-                // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
-                let new_octave = self.current_state.octave + 1;
-                self.current_state.octave = if new_octave > State::MAX_OCTAVE {
-                    State::DEFAULT_OCTAVE
-                } else {
-                    new_octave
-                };
-            }
+                //R+
+                Sheet::DEFAULT_R_PLUS => {
+                    // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
+                    let new_octave = self.current_state.octave + 1;
+                    self.current_state.octave = if new_octave > State::MAX_OCTAVE {
+                        State::DEFAULT_OCTAVE
+                    } else {
+                        new_octave
+                    };
+                }
 
-            //R-
-            Sheet::DEFAULT_R_MINUS => {
-                // Diminui UMA oitava;
-                self.current_state.octave = self.current_state.octave.saturating_sub(1);
-            }
-            //BPM+
-            Sheet::DEFAULT_BPM_PLUS => {
-                // Aumenta BPM em 80 unidades
-                self.current_state.bpm = self.current_state.bpm.saturating_add(80);
-            }
+                //R-
+                Sheet::DEFAULT_R_MINUS => {
+                    // Diminui UMA oitava;
+                    self.current_state.octave = self.current_state.octave.saturating_sub(1);
+                }
+                //BPM+
+                Sheet::DEFAULT_BPM_PLUS => {
+                    // Aumenta BPM em 80 unidades
+                    self.current_state.bpm = self.current_state.bpm.saturating_add(80);
+                }
 
-            '?' => {
-                //Toca uma nota aleatória (de A a G), randomicamente escolhida
-                let mut rng = rand::thread_rng();
-                let random_note: Note = rng.gen();
-                self.current_state.note = Some(random_note);
-            }
+                '?' => {
+                    //Toca uma nota aleatória (de A a G), randomicamente escolhida
+                    let mut rng = rand::thread_rng();
+                    let random_note: Note = rng.gen();
+                    self.current_state.note = Some(random_note);
+                }
 
-            '\n' => {
-                //Trocar instrumento aleatorio
-                let mut rng = rand::thread_rng();
-                self.current_state.instrument = rng.gen_range(0..=i8::MAX as u8);
-            }
+                '\n' => {
+                    //Trocar instrumento aleatorio
+                    let mut rng = rand::thread_rng();
+                    self.current_state.instrument = rng.gen_range(0..=i8::MAX as u8);
+                }
 
-            ';' => {
-                //Atribui valor aleatorio ao BPM
-                let mut rng = rand::thread_rng();
-                self.current_state.bpm = rng.gen_range(1..State::MAX_BPM);
+                ';' => {
+                    //Atribui valor aleatorio ao BPM
+                    let mut rng = rand::thread_rng();
+                    self.current_state.bpm = rng.gen_range(1..State::MAX_BPM);
+                }
+                _ => {}
             }
-            _ => {}
         }
 
         self.states.push(self.current_state);
