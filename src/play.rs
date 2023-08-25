@@ -77,7 +77,6 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
             }
         }
         buf.clear();
-        println!("{}", buf.capacity())
     }
 
     sleep(Duration::from_millis(150));

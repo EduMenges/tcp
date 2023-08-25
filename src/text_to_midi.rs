@@ -223,7 +223,7 @@ impl Sheet {
         return aux;
     }
 
-    pub fn proccess_text(&mut self) {
+    pub fn process_text(&mut self) {
         let text = self.map_substring_to_char();
 
         for c in text.chars() {
