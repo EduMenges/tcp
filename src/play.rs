@@ -4,19 +4,61 @@ use std::io::{stdin, stdout, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
+use crate::time_state::*;
 use midi_msg::{MidiMsg, ReceiverContext};
 use midir::{MidiOutput, MidiOutputPort};
-use midly::num::*;
+use midly::{num::*, Fps};
 use midly::{Smf, Track};
 
-fn ticks_to_micros(ticks: u28, mspqn: u24, ppqn: u15) -> u64 {
-    (ticks.as_int() as u64 * mspqn.as_int() as u64) / ppqn.as_int() as u64
-}
+use crate::midi_action::MIDIaction;
 
 pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
-    let midi_out = MidiOutput::new("Output")?;
+    let mut conn_out = prepare_connection()?;
 
-    // Get an output port (read from console if multiple are available)
+    let mut buf = Vec::new();
+    let ppqn = match file.header.timing {
+        midly::Timing::Metrical(as_u15) => as_u15,
+        midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
+    };
+
+    // The current Milliseconds Per Quarter Note
+    let mut time_state = TimeState::default();
+
+    for event in file.tracks[0].iter() {
+        if event.delta > 0 {
+            sleep(time_state.duration_per_tick() * event.delta.as_int())
+        }
+        match event.kind.as_live_event() {
+            Some(event) => {
+                let _ = event.write(&mut buf);
+                let _ = conn_out.send(&buf);
+            }
+            None => match event.kind {
+                midly::TrackEventKind::Meta(midly::MetaMessage::Tempo(mspqn)) => {
+                    time_state.set_mspqn(mspqn);
+                }
+                midly::TrackEventKind::Meta(midly::MetaMessage::TimeSignature(
+                    numerator,
+                    denominator,
+                    _,
+                    _,
+                )) => {
+                    time_state.set_signature(numerator, denominator);
+                }
+                _ => (),
+            },
+        }
+        buf.clear();
+    }
+
+    sleep(Duration::from_millis(150));
+    println!("\nClosing connection");
+
+    Ok(())
+}
+
+fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
+    let midi_out = MidiOutput::new("Output")?;
     let out_ports = midi_out.ports();
     let out_port: &MidiOutputPort = match out_ports.len() {
         0 => return Err("no output port found".into()),
@@ -43,46 +85,10 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
                 .ok_or("Invalid output port selected.")?
         }
     };
-
     println!("Opening connection");
     let mut conn_out = midi_out.connect(out_port, "midir")?;
     println!("Connection open");
-
-    let mut buf = Vec::new();
-    let ppqn = match file.header.timing {
-        midly::Timing::Metrical(as_u15) => as_u15,
-        midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
-    };
-
-    // The current Milliseconds Per Quarter Note
-    let mut current_mspqn: u24 = Default::default();
-
-    for event in file.tracks[0].iter() {
-        if event.delta > 0 {
-            sleep(Duration::from_micros(ticks_to_micros(
-                event.delta,
-                current_mspqn,
-                ppqn,
-            )))
-        }
-        match event.kind.as_live_event() {
-            Some(event) => {
-                let _ = event.write(&mut buf);
-                let _ = conn_out.send(&buf);
-            }
-            None => {
-                if let midly::TrackEventKind::Meta(midly::MetaMessage::Tempo(mspqn)) = event.kind {
-                    current_mspqn = mspqn;
-                }
-            }
-        }
-        buf.clear();
-    }
-
-    sleep(Duration::from_millis(150));
-    println!("\nClosing connection");
-
-    Ok(())
+    Ok(conn_out)
 }
 
 #[cfg(test)]
