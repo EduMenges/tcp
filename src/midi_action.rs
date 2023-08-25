@@ -52,6 +52,10 @@ impl MIDIaction {
         smf
     }
 
+    fn bpm_into_ticks(bpm: u32) -> u28 {
+        u28::from_int_lossy(60_000_000 / (bpm * Self::DEFAULT_PPQN as u32))
+    }
+
     fn add_beggining(track: &mut Track) {
         for message in Self::TO_BE_ADDED {
             track.push(TrackEvent {
@@ -75,7 +79,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: u28::from_int_lossy(bpm),
+                    delta: Self::bpm_into_ticks(bpm),
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
                         message: MidiMessage::NoteOff {
@@ -118,7 +122,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: u28::from_int_lossy(bpm),
+                    delta: Self::bpm_into_ticks(bpm),
                     kind: TrackEventKind::Midi {
                         channel: Self::DEFAULT_CHANNEL,
                         message: MidiMessage::Controller {
@@ -130,12 +134,12 @@ impl MIDIaction {
             }
             MIDIaction::ChangeBPM(bpm) => {
                 track.push(TrackEvent {
-                    delta: u28::default(),
+                    delta: Self::INSTANT,
                     kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(bpm_into_micros(bpm))),
                 });
             }
             MIDIaction::EndTrack => track.push(TrackEvent {
-                delta: u28::default(),
+                delta: Self::INSTANT,
                 kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
             }),
         };
