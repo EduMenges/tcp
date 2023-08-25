@@ -44,16 +44,17 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
         }
     };
 
-    println!("\nOpening connection");
+    println!("Opening connection");
     let mut conn_out = midi_out.connect(out_port, "midir")?;
-    println!("Connection open. Listen!");
+    println!("Connection open");
 
     let mut buf = Vec::new();
     let ppqn = match file.header.timing {
         midly::Timing::Metrical(as_u15) => as_u15,
-        midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding are necessary"),
+        midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
     };
 
+    // The current Milliseconds Per Quarter Note
     let mut current_mspqn: u24 = Default::default();
 
     for event in file.tracks[0].iter() {
@@ -87,7 +88,7 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod test {
-    use crate::{text_to_midi, midi_action::MIDIaction};
+    use crate::{midi_action::MIDIaction, text_to_midi};
 
     use super::*;
 
@@ -99,8 +100,15 @@ mod test {
     }
 
     #[test]
-    fn from_real_file() {
+    fn from_regular_file() {
         let smf = Smf::parse(include_bytes!("../test-asset/twinkle.mid")).unwrap();
+
+        let _ = play_file(&smf);
+    }
+
+    #[test]
+    fn from_mocked_file() {
+        let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale.mid")).unwrap();
 
         let _ = play_file(&smf);
     }
@@ -110,7 +118,7 @@ mod test {
         let mut test = text_to_midi::Sheet::new(120, "CDEFGAB");
         test.process_text();
         let actions = test.process();
-        
+
         let _ = play_file(&MIDIaction::to_track(&actions));
     }
 }
