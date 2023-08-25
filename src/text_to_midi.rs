@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 use midi_msg::MidiMsg;
 use midly::{num::*, Header, MetaMessage, Smf, Track, TrackEvent};
 use rand::{
@@ -194,26 +196,38 @@ impl Sheet {
         
         ret
     }
-
-    pub fn process_text(&mut self) {
-        let processed_text = self
+  
+    pub fn map_substring_to_char(&mut self) -> String {
+        let mut text = self
+      
             .text
             .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
             .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
             .replace("R-", &Sheet::DEFAULT_R_MINUS.to_string());
 
+        let mut aux = "".to_string();
         let mut prev_char = '\0';
 
-        for c in processed_text.chars() {
+        for c in text.chars() {
             if let Some(new_note) = Note::from_char(prev_char) {
                 if matches!(c, 'o' | 'O' | 'I' | 'i' | 'u' | 'U') {
-                    self.parse_char(prev_char);
+                    aux.push(prev_char);
                     prev_char = c;
                     continue;
                 }
             }
-            self.parse_char(c);
+            aux.push(c);
             prev_char = c;
+        }
+
+        return aux;
+    }
+
+    pub fn proccess_text(&mut self) {
+        let text = self.map_substring_to_char();
+
+        for c in text.chars() {
+            self.parse_char(c);
         }
     }
 
@@ -241,11 +255,14 @@ impl Sheet {
                     // Volume retorna ao volume padrão
                     self.current_state.volume = State::DEFAULT_VOLUME;
                 }
-
-                'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
-                    // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
-                    self.current_state.instrument = 125;
-                }
+            'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
+                // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
+                self.current_state.instrument = 125;
+                self.current_state.note = Some(Note::Do);
+                let aux_state = self.states.last().unwrap().clone();
+                self.states.push(self.current_state);
+                self.current_state = aux_state;
+            }
 
                 //R+
                 Sheet::DEFAULT_R_PLUS => {
@@ -292,5 +309,54 @@ impl Sheet {
         }
 
         self.states.push(self.current_state);
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{Sheet, State};
+
+    #[test]
+    fn match_process_general_text_behavior() {
+        let text = "; \nasBPM+ ?!;-+".to_string();
+        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let received_text = sheet.map_substring_to_char();
+
+        let expected_text = "; \nasß ?!;-+".to_string();
+
+        assert_eq!(expected_text, received_text);
+    }
+
+    #[test]
+    fn match_process_note_text_behavior() {
+        let text = "AaBbCcDdEeFfGg".to_string();
+        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let received_text = sheet.map_substring_to_char();
+
+        let expected_text = "AaBbCcDdEeFfGg".to_string();
+
+        assert_eq!(expected_text, received_text);
+    }
+
+    #[test]
+    fn match_process_substring_text_behavior() {
+        let text = "BPM+R+R-".to_string();
+        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let received_text = sheet.map_substring_to_char();
+
+        let expected_text = "ß東世".to_string();
+
+        assert_eq!(expected_text, received_text);
+    }
+
+    #[test]
+    fn match_process_vogals_text_behavior() {
+        let text = "OoIiUuAiBICuDUEoFo".to_string();
+        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let received_text = sheet.map_substring_to_char();
+
+        let expected_text = "OoIiUuAABBCCDDEEFF".to_string();
+
+        assert_eq!(expected_text, received_text);
     }
 }
