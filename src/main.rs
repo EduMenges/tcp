@@ -1,6 +1,7 @@
 mod text_to_midi;
 mod midi_action;
 mod play;
+mod time_state;
 extern crate midir;
 
 use text_to_midi::Sheet;
