@@ -173,14 +173,14 @@ impl Sheet {
                 ret.push(MIDIaction::ChangeVolume(actual_state.volume));
             } else {
                 match actual_state.note {
-                    Some(N) => match N {
+                    Some(note) => match note {
                         Note::Pause => {
                             ret.push(MIDIaction::Pause(actual_state.bpm as u32));
                         }
                         _ => {
                             ret.push(MIDIaction::PlayNote {
                                 bpm: actual_state.bpm as u32,
-                                note: (N as u8) + 8 * actual_state.octave,
+                                note: (note as u8) + 12 * (actual_state.octave + 1),
                             });
                         }
                     },
