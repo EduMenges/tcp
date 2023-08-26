@@ -22,9 +22,9 @@ pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
         midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
     };
 
-    for event in file.tracks[0].iter() {
+    for event in &file.tracks[0] {
         if event.delta > 0 {
-            sleep(time_state.duration_per_tick() * event.delta.as_int())
+            sleep(time_state.duration_per_tick() * event.delta.as_int());
         }
         match event.kind.as_live_event() {
             Some(event) => {
@@ -93,7 +93,7 @@ fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
 mod test {
     use std::ops::Deref;
 
-    use crate::{main, midi_action::MIDIaction, text_to_midi};
+    use crate::{main, midi_action::MidiAction, text_to_midi};
 
     use super::*;
 
@@ -126,7 +126,7 @@ mod test {
     #[test]
     fn scale_200_bpm() {
         let actions = text_to_midi::Sheet::new(120, "BPM+CDEFGABR+C");
-        let file = MIDIaction::to_track(&actions.process());
+        let file = MidiAction::to_track(&actions.process());
         let _ = play_file(&file);
         let _ = file.save("../200bpm.mid");
     }
@@ -135,7 +135,7 @@ mod test {
         let test = text_to_midi::Sheet::new(120, text.to_string());
         let actions = test.process();
 
-        let _ = play_file(&MIDIaction::to_track(&actions));
+        let _ = play_file(&MidiAction::to_track(&actions));
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod test {
         let start = "BPM+BPM+R+".to_owned();
         let main_loop = "EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EB";
         let actions = text_to_midi::Sheet::new(140, (0..10).fold(start, |acc, _| acc + main_loop + "\n")).process();
-        let file = MIDIaction::to_track(&actions);
+        let file = MidiAction::to_track(&actions);
         let _ = file.save("../tubular_bells.mid");
         let _ = play_file(&file);
     }

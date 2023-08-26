@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use midly::num::*;
 
-use crate::midi_action::MIDIaction;
+use crate::midi_action::MidiAction;
 
 const ONE_MINUTE_IN_MICROSECONDS: u32 = 60_000_000;
 
@@ -55,22 +55,22 @@ impl TimeState {
     }
 
     /// Getter for time signature
-    pub const fn time_signature(&self) -> TimeSignature {
+    pub const fn time_signature(self) -> TimeSignature {
         self.time_signature
     }
 
     /// Getter for the microseconds per quarter note
-    pub const fn mspqn(&self) -> u24 {
+    pub const fn mspqn(self) -> u24 {
         self.microsecspqn
     }
 
     /// Getter for the BPM
-    pub fn bpm(&self) -> u16 {
+    pub fn bpm(self) -> u16 {
         ((ONE_MINUTE_IN_MICROSECONDS as f64 / self.microsecspqn.as_int() as f64)
             * (self.time_signature().denominator as f64 / 4_f64)) as u16
     }
 
-    pub fn duration_per_tick(&self) -> Duration {
+    pub fn duration_per_tick(self) -> Duration {
         Duration::from_micros((self.mspqn().as_int() as u64) / (self.tpqn.as_int() as u64))
     }
 
@@ -96,9 +96,9 @@ impl TimeState {
 impl Default for TimeState {
     fn default() -> Self {
         Self {
-            time_signature: Default::default(),
+            time_signature: TimeSignature::default(),
             microsecspqn: Self::D_MSPQN,
-            tpqn: MIDIaction::D_TPQN,
+            tpqn: MidiAction::D_TPQN,
         }
     }
 }

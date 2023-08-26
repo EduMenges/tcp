@@ -3,7 +3,7 @@ use rand::{
     Rng,
 };
 
-use crate::midi_action::MIDIaction;
+use crate::midi_action::MidiAction;
 
 /// Enum com as notas possíveis.
 #[derive(Clone, Copy, Default)]
@@ -107,7 +107,7 @@ impl Default for State {
             octave: State::DEFAULT_OCTAVE,
             volume: State::DEFAULT_VOLUME,
             bpm: State::DEFAULT_BPM,
-            note: Default::default(),
+            note: Option::default(),
         }
     }
 }
@@ -135,34 +135,34 @@ impl Sheet {
             bpm,
             states: Vec::new(),
             text: text.to_string(),
-            current_state: Default::default(),
+            current_state: State::default(),
         }
     }
 
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
-    pub fn process(mut self) -> Vec<MIDIaction> {
+    pub fn process(mut self) -> Vec<MidiAction> {
         self.process_text();
-        let mut ret = Vec::<MIDIaction>::new();
+        let mut ret = Vec::<MidiAction>::new();
 
         self.current_state = self.states[0];
-        ret.push(MIDIaction::ChangeBPM(self.current_state.bpm));
-        ret.push(MIDIaction::ChangeInstrument(self.current_state.instrument));
-        ret.push(MIDIaction::ChangeVolume(self.current_state.volume));
+        ret.push(MidiAction::ChangeBPM(self.current_state.bpm));
+        ret.push(MidiAction::ChangeInstrument(self.current_state.instrument));
+        ret.push(MidiAction::ChangeVolume(self.current_state.volume));
 
         for actual_state in self.states {
             if actual_state.bpm != self.current_state.bpm {
-                ret.push(MIDIaction::ChangeBPM(actual_state.bpm));
+                ret.push(MidiAction::ChangeBPM(actual_state.bpm));
             } else if actual_state.instrument != self.current_state.instrument {
-                ret.push(MIDIaction::ChangeInstrument(actual_state.instrument));
+                ret.push(MidiAction::ChangeInstrument(actual_state.instrument));
             } else if actual_state.volume != self.current_state.volume {
-                ret.push(MIDIaction::ChangeVolume(actual_state.volume));
+                ret.push(MidiAction::ChangeVolume(actual_state.volume));
             } else if let Some(note) = actual_state.note {
                 match note {
                     Note::Pause => {
-                        ret.push(MIDIaction::Pause);
+                        ret.push(MidiAction::Pause);
                     }
                     _ => {
-                        ret.push(MIDIaction::PlayNote(
+                        ret.push(MidiAction::PlayNote(
                             (note as u8) + 12 * (actual_state.octave + 1),
                         ));
                     }
@@ -172,7 +172,7 @@ impl Sheet {
             self.current_state = actual_state;
         }
 
-        ret.push(MIDIaction::EndTrack);
+        ret.push(MidiAction::EndTrack);
 
         ret
     }
@@ -184,7 +184,7 @@ impl Sheet {
             .replace("R+", &Sheet::D_R_PLUS.to_string())
             .replace("R-", &Sheet::D_R_MINUS.to_string());
 
-        let mut aux = "".to_string();
+        let mut aux = String::new();
         let mut prev_char = '\0';
 
         for c in text.chars() {
@@ -210,10 +210,8 @@ impl Sheet {
         }
     }
 
-    /// Altera o current_state e coloca no fim do vetor
+    /// Altera o `current_state` e coloca no fim do vetor
     fn parse_char(&mut self, ch: char) {
-        print!("{}", ch);
-
         // ABCDEFG
         let new_note: Option<Note> = Note::from_char(ch);
         if let Some(note) = new_note {

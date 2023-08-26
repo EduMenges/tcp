@@ -4,7 +4,7 @@ use midly::{num::*, *};
 
 /// Enum representando as possíveis ações de MIDI.
 #[derive(Clone, Copy)]
-pub enum MIDIaction {
+pub enum MidiAction {
     PlayNote(u8),
     ChangeInstrument(u8),
     ChangeVolume(u16),
@@ -13,7 +13,7 @@ pub enum MIDIaction {
     EndTrack,
 }
 
-impl MIDIaction {
+impl MidiAction {
     const D_CHANNEL: u4 = u4::from_int_lossy(0);
     const D_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
     /// Instant delta
@@ -46,7 +46,7 @@ impl MIDIaction {
 
         // Main loop
         for action in slice {
-            action.push_as_event(&mut track)
+            action.push_as_event(&mut track);
         }
 
         smf.tracks.push(track);
@@ -68,7 +68,7 @@ impl MIDIaction {
 
     pub fn push_as_event(self, track: &mut Track) {
         match self {
-            MIDIaction::PlayNote(note) => {
+            MidiAction::PlayNote(note) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -90,7 +90,7 @@ impl MIDIaction {
                     },
                 });
             }
-            MIDIaction::ChangeInstrument(instrument) => {
+            MidiAction::ChangeInstrument(instrument) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -101,7 +101,7 @@ impl MIDIaction {
                     },
                 });
             }
-            MIDIaction::ChangeVolume(volume) => track.push(TrackEvent {
+            MidiAction::ChangeVolume(volume) => track.push(TrackEvent {
                 delta: Self::INSTANT,
                 kind: TrackEventKind::Midi {
                     channel: Self::D_CHANNEL,
@@ -111,7 +111,7 @@ impl MIDIaction {
                     },
                 },
             }),
-            MIDIaction::Pause => {
+            MidiAction::Pause => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -133,7 +133,7 @@ impl MIDIaction {
                     },
                 });
             }
-            MIDIaction::ChangeBPM(bpm) => {
+            MidiAction::ChangeBPM(bpm) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(
@@ -141,7 +141,7 @@ impl MIDIaction {
                     )),
                 });
             }
-            MIDIaction::EndTrack => track.push(TrackEvent {
+            MidiAction::EndTrack => track.push(TrackEvent {
                 delta: u28::from_int_lossy(1),
                 kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
             }),
@@ -154,7 +154,7 @@ mod test {
 
     use midly::{num::*, Track, TrackEventKind};
 
-    use super::MIDIaction;
+    use super::MidiAction;
 
     #[test]
     fn change_instrument() {
@@ -167,7 +167,7 @@ mod test {
         };
 
         let mut midi_vec = Track::new();
-        MIDIaction::ChangeInstrument(0).push_as_event(&mut midi_vec);
+        MidiAction::ChangeInstrument(0).push_as_event(&mut midi_vec);
 
         // Assert
         assert_eq!(correct, midi_vec[0].kind);
