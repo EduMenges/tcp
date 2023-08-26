@@ -113,9 +113,7 @@ impl State {
     }
 }
 
-pub fn bpm_into_micros(bpm: u8) -> u24 {
-    pub const MICROSECS_IN_MINUTE: u32 = 60_000_000;
-    u24::from_int_lossy(MICROSECS_IN_MINUTE / bpm as u32)
+    u24::from_int_lossy(((bpm.into() * 10_u32.pow(6)) / 4) / 60)
 }
 
 impl Default for State {
@@ -180,10 +178,9 @@ impl Sheet {
                             ret.push(MIDIaction::Pause(actual_state.bpm as u32));
                         }
                         _ => {
-                            ret.push(MIDIaction::PlayNote {
-                                bpm: actual_state.bpm as u32,
-                                note: (note as u8) + 12 * (actual_state.octave + 1),
-                            });
+                            ret.push(MIDIaction::PlayNote(
+                                (note as u8) + 12 * (actual_state.octave + 1),
+                            ));
                         }
                     },
                     None => (),
