@@ -91,11 +91,11 @@ impl State {
     /// O volume padrão.
     pub const DEFAULT_VOLUME: u16 = 100;
 
-    pub const MAX_VOLUME: u16 = 16383;
+    pub const MAX_VOLUME: u16 = u16::MAX >> 1;
 
     pub const DEFAULT_BPM: u16 = 120;
 
-    pub const MAX_BPM: u16 = 300;
+    pub const MAX_BPM: u16 = 360;
 
     /// Cria um estado novo.
     pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u16, note: Note) -> Self {
@@ -150,6 +150,7 @@ impl Sheet {
 
     /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
     pub fn process(mut self) -> Vec<MIDIaction> {
+        self.process_text();
         let mut ret = Vec::<MIDIaction>::new();
 
         self.current_state = self.states[0];
@@ -165,19 +166,16 @@ impl Sheet {
             } else if actual_state.volume != self.current_state.volume {
                 ret.push(MIDIaction::ChangeVolume(actual_state.volume));
             } else {
-                match actual_state.note {
-                    Some(note) => match note {
-                        Note::Pause => {
-                            ret.push(MIDIaction::Pause(actual_state.bpm as u32));
-                        }
-                        _ => {
-                            ret.push(MIDIaction::PlayNote(
-                                (note as u8) + 12 * (actual_state.octave + 1),
-                            ));
-                        }
-                    },
-                    None => (),
-                }
+                if let Some(note) = actual_state.note { match note {
+                    Note::Pause => {
+                        ret.push(MIDIaction::Pause(actual_state.bpm as u32));
+                    }
+                    _ => {
+                        ret.push(MIDIaction::PlayNote(
+                            (note as u8) + 12 * (actual_state.octave + 1),
+                        ));
+                    }
+                } }
             }
             self.current_state = actual_state;
         }
@@ -333,7 +331,9 @@ mod test {
         let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
-        let expected_text = "ß東世".to_string();
+        let mut expected_text = Sheet::DEFAULT_BPM_PLUS.to_string();
+        expected_text.push(Sheet::DEFAULT_R_PLUS);
+        expected_text.push(Sheet::DEFAULT_R_MINUS);
 
         assert_eq!(expected_text, received_text);
     }

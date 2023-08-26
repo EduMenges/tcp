@@ -136,7 +136,9 @@ impl MIDIaction {
             MIDIaction::ChangeBPM(bpm) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
-                    kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(TimeState::mspqn_from_bpm(bpm, 4))),
+                    kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(
+                        TimeState::mspqn_from_bpm(bpm, 4),
+                    )),
                 });
             }
             MIDIaction::EndTrack => track.push(TrackEvent {
