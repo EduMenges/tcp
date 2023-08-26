@@ -93,9 +93,9 @@ impl State {
 
     pub const MAX_VOLUME: u16 = 16383;
 
-    pub const DEFAULT_BPM: u8 = 80;
+    pub const DEFAULT_BPM: u16 = 120;
 
-    pub const MAX_BPM: u8 = 255;
+    pub const MAX_BPM: u16 = 300;
 
     /// Cria um estado novo.
     pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u8, note: Note) -> Self {
