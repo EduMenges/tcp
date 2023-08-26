@@ -1,16 +1,16 @@
 use std::error::Error;
-use std::fs;
+
 use std::io::{stdin, stdout, Write};
 use std::thread::sleep;
 use std::time::Duration;
 
 use crate::time_state::*;
-use midi_msg::{MidiMsg, ReceiverContext};
-use midir::{MidiOutput, MidiOutputPort};
-use midly::{num::*, Fps};
-use midly::{Smf, Track};
 
-use crate::midi_action::MIDIaction;
+use midir::{MidiOutput, MidiOutputPort};
+
+use midly::{Smf};
+
+
 
 pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
     let mut conn_out = prepare_connection()?;
@@ -84,7 +84,7 @@ fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
         }
     };
     println!("Opening connection");
-    let mut conn_out = midi_out.connect(out_port, "midir")?;
+    let conn_out = midi_out.connect(out_port, "midir")?;
     println!("Connection open");
     Ok(conn_out)
 }
@@ -144,7 +144,7 @@ mod test {
     }
 
     #[test]
-    /// Contains UP in BPM
+    /// Contains UP in BPM, UP and LOW in octave
     fn tubular_bells() {
         let start = "BPM+BPM+R+".to_owned();
         let main_loop = "EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EB";
@@ -152,13 +152,6 @@ mod test {
         let file = MIDIaction::to_track(&actions);
         let _ = file.save("../tubular_bells.mid");
         let _ = play_file(&file);
-    }
-
-    #[test]
-    fn play_tubullar_bells() {
-        let smf = Smf::parse(include_bytes!("../tubular_bells.mid")).unwrap();
-
-        let _ = play_file(&smf);
     }
 
     #[test]

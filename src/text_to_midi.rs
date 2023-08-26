@@ -1,7 +1,3 @@
-use std::ops::Add;
-
-use midi_msg::MidiMsg;
-use midly::{num::*, Header, MetaMessage, Smf, Track, TrackEvent};
 use rand::{
     distributions::{Distribution, Standard},
     Rng,
@@ -169,7 +165,7 @@ impl Sheet {
                 if let Some(note) = actual_state.note {
                     match note {
                         Note::Pause => {
-                            ret.push(MIDIaction::Pause(actual_state.bpm as u32));
+                            ret.push(MIDIaction::Pause);
                         }
                         _ => {
                             ret.push(MIDIaction::PlayNote(
@@ -188,7 +184,7 @@ impl Sheet {
     }
 
     pub fn map_substring_to_char(&mut self) -> String {
-        let mut text = self
+        let text = self
             .text
             .replace("BPM+", &Sheet::D_BPM_PLUS.to_string())
             .replace("R+", &Sheet::D_R_PLUS.to_string())
@@ -198,7 +194,7 @@ impl Sheet {
         let mut prev_char = '\0';
 
         for c in text.chars() {
-            if let Some(new_note) = Note::from_char(prev_char) {
+            if let Some(_new_note) = Note::from_char(prev_char) {
                 if matches!(c, 'o' | 'O' | 'I' | 'i' | 'u' | 'U') {
                     aux.push(prev_char);
                     prev_char = c;
