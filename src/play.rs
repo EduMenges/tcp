@@ -112,18 +112,55 @@ mod test {
     }
 
     #[test]
-    fn from_mocked_file() {
+    fn scale_from_mocked_file() {
         let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale.mid")).unwrap();
 
         let _ = play_file(&smf);
     }
 
     #[test]
-    fn from_ours() {
-        let mut test = text_to_midi::Sheet::new(120, "CDEFGABR+C");
+    fn scale_from_ours() {
+        play("CDEFGABR+C");
+    }
+
+
+    fn play(text: &str) {
+        let mut test = text_to_midi::Sheet::new(120, text);
         test.process_text();
         let actions = test.process();
 
         let _ = play_file(&MIDIaction::to_track(&actions));
+    }
+    
+    #[test]
+    fn descending_major_scale() {
+        play("EDCR-BAGFEDCR-BAG");
+    }
+
+    #[test]
+    /// Contains UP in BPM
+    fn tubular_bells(){
+        play("EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EAEB");
+    }
+
+    #[test]
+    fn pause() {
+        play("C D E F");
+    }
+
+    #[test]
+    fn scale_with_varying_cases()
+    {
+        play("cDeFgAb");
+    }
+
+    #[test]
+    fn remaining_vowels() {
+        play("Ciiou");
+    }
+
+    #[test]
+    fn random_notes() {
+        play("??????");
     }
 }
