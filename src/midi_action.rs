@@ -1,5 +1,5 @@
-use crate::{text_to_midi::*, time_state::TimeState};
-use midi_msg::MidiMsg;
+use crate::time_state::TimeState;
+
 use midly::{num::*, *};
 
 /// Enum representando as possíveis ações de MIDI.
@@ -8,7 +8,7 @@ pub enum MIDIaction {
     PlayNote(u8),
     ChangeInstrument(u8),
     ChangeVolume(u16),
-    Pause(u32),
+    Pause,
     ChangeBPM(u16),
     EndTrack,
 }
@@ -24,8 +24,7 @@ impl MIDIaction {
     const D_TIME_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::TimeSignature(4, 2, 24, 8);
     /// Is C major
     const D_KEY_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::KeySignature(0, false);
-    const D_MIDI_PORT: midly::MetaMessage<'_> =
-        midly::MetaMessage::MidiPort(u7::from_int_lossy(0));
+    const D_MIDI_PORT: midly::MetaMessage<'_> = midly::MetaMessage::MidiPort(u7::from_int_lossy(0));
     const TO_BE_ADDED: [MetaMessage<'_>; 4] = [
         MetaMessage::TrackName(b"tcp_out"),
         Self::D_TIME_SIGNATURE,
@@ -112,7 +111,7 @@ impl MIDIaction {
                     },
                 },
             }),
-            MIDIaction::Pause(bpm) => {
+            MIDIaction::Pause => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
