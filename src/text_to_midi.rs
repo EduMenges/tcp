@@ -72,7 +72,7 @@ impl Default for Note {
 #[derive(Clone, Copy)]
 pub struct State {
     /// BPM
-    pub bpm: u8,
+    pub bpm: u16,
     /// O instrumento atual.
     pub instrument: u8,
     /// A oitava atual.
@@ -98,7 +98,7 @@ impl State {
     pub const MAX_BPM: u16 = 300;
 
     /// Cria um estado novo.
-    pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u8, note: Note) -> Self {
+    pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u16, note: Note) -> Self {
         Self {
             instrument,
             octave,
@@ -113,6 +113,7 @@ impl State {
     }
 }
 
+pub fn bpm_into_micros(bpm: impl Into::<u32>) -> u24 {
     u24::from_int_lossy(((bpm.into() * 10_u32.pow(6)) / 4) / 60)
 }
 
@@ -131,7 +132,7 @@ impl Default for State {
 /// Segura informações sobre a música e oferece métodos para seu processamento.
 pub struct Sheet {
     /// O BPM da partitura.
-    bpm: u8,
+    bpm: u16,
     /// O estado atual.
     current_state: State,
     /// Os estados já processados.
@@ -146,7 +147,7 @@ impl Sheet {
     const DEFAULT_BPM_PLUS: char = 'ß';
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
-    pub fn new(bpm: u8, text: impl ToString) -> Self {
+    pub fn new(bpm: u16, text: impl ToString) -> Self {
         Self {
             bpm,
             states: Vec::new(),
@@ -190,13 +191,12 @@ impl Sheet {
         }
 
         ret.push(MIDIaction::EndTrack);
-        
+
         ret
     }
-  
+
     pub fn map_substring_to_char(&mut self) -> String {
         let mut text = self
-      
             .text
             .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
             .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
@@ -252,14 +252,14 @@ impl Sheet {
                     // Volume retorna ao volume padrão
                     self.current_state.volume = State::DEFAULT_VOLUME;
                 }
-            'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
-                // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
-                self.current_state.instrument = 125;
-                self.current_state.note = Some(Note::Do);
-                let aux_state = self.states.last().unwrap().clone();
-                self.states.push(self.current_state);
-                self.current_state = aux_state;
-            }
+                'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
+                    // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
+                    self.current_state.instrument = 125;
+                    self.current_state.note = Some(Note::Do);
+                    let aux_state = self.states.last().unwrap().clone();
+                    self.states.push(self.current_state);
+                    self.current_state = aux_state;
+                }
 
                 //R+
                 Sheet::DEFAULT_R_PLUS => {

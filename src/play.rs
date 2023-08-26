@@ -43,7 +43,7 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
                     _,
                     _,
                 )) => {
-                    time_state.set_signature(numerator, denominator);
+                    time_state.set_time_signature(TimeSignature::from_raw(numerator, denominator));
                 }
                 _ => (),
             },

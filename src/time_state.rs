@@ -7,57 +7,94 @@ use crate::midi_action::MIDIaction;
 const ONE_MINUTE_IN_MICROSECONDS: u32 = 60_000_000;
 
 #[derive(Clone, Copy)]
+pub struct TimeSignature {
+    /// Numerator of time signature
+    pub numerator: u8,
+    /// Denominator of time signature
+    pub denominator: u8,
+}
+
+impl Default for TimeSignature {
+    fn default() -> Self {
+        Self {
+            numerator: 4,
+            denominator: 4,
+        }
+    }
+}
+
+impl TimeSignature {
+    /**
+    Builds from raw, where `numerator` is the numerator,
+    `denominator` is a power of 2.
+    */
+    pub const fn from_raw(numerator: u8, denominator: u8) -> Self {
+        Self {
+            numerator,
+            denominator: 2_u8.pow(denominator as u32),
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
 pub struct TimeState {
-    numerator: u8,
-    denominator: u8,
-    mspqn: u24,
-    ppqn: u16,
+    /// The time signature
+    time_signature: TimeSignature,
+    /// Microseconds per quarter note
+    microsecspqn: u24,
+    /// Ticks per quarter note (should be fixed)
+    tpqn: u28,
 }
 
 impl TimeState {
     const D_MSPQN: u24 = u24::from_int_lossy(500_000);
 
-    pub fn set_signature(&mut self, numerator: u8, denominator: u8) {
-        self.denominator = 2_u8.pow(denominator as u32);
-        self.numerator = numerator;
-    }
-
+    /// Sets the microseconds per quarter note
     pub fn set_mspqn(&mut self, mspqn: u24) {
-        self.mspqn = mspqn;
+        self.microsecspqn = mspqn;
     }
 
-    pub const fn time_signature(&self) -> (u8, u8) {
-        (self.numerator, self.denominator)
+    /// Getter for time signature
+    pub const fn time_signature(&self) -> TimeSignature {
+        self.time_signature
     }
 
+    /// Getter for the microseconds per quarter note
     pub const fn mspqn(&self) -> u24 {
-        self.mspqn
+        self.microsecspqn
     }
 
+    /// Getter for the BPM
     pub fn bpm(&self) -> u16 {
-        ((ONE_MINUTE_IN_MICROSECONDS as f64 / self.mspqn.as_int() as f64)
-            * (self.denominator as f64 / 4_f64)) as u16
+        ((ONE_MINUTE_IN_MICROSECONDS as f64 / self.microsecspqn.as_int() as f64)
+            * (self.time_signature().denominator as f64 / 4_f64)) as u16
     }
 
+    
     pub fn duration_per_tick(&self) -> Duration {
-        Duration::from_micros((self.mspqn().as_int() as u64) / (self.ppqn as u64))
+        Duration::from_micros((self.mspqn().as_int() as u64) / (self.tpqn.as_int() as u64))
     }
 
+    /// Sets the MSPQN based on a BPM
     pub fn set_mspqn_from_bpm(&mut self, bpm: u16) {
         self.set_mspqn(u24::from_int_lossy(
-            ((ONE_MINUTE_IN_MICROSECONDS * self.denominator as u32) as f64 / (bpm * 4) as f64)
-                as u32,
+            ((ONE_MINUTE_IN_MICROSECONDS * self.time_signature().denominator as u32) as f64
+                / (bpm * 4) as f64) as u32,
         ));
+    }
+
+    /// Sets the time signature
+    pub fn set_time_signature(&mut self, time_signature: TimeSignature) {
+        self.time_signature = time_signature;
     }
 }
 
 impl Default for TimeState {
     fn default() -> Self {
         Self {
-            numerator: 4,
-            denominator: 4,
-            mspqn: Self::D_MSPQN,
-            ppqn: MIDIaction::D_PPQN,
+            time_signature: Default::default(),
+            microsecspqn: Self::D_MSPQN,
+            tpqn: MIDIaction::D_TPQN,
         }
     }
 }
@@ -79,7 +116,7 @@ mod test {
     fn mspqn() {
         // Arrange
         let mut regular = TimeState::default();
-        
+
         // Act
         regular.set_mspqn_from_bpm(120);
 
