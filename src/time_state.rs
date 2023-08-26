@@ -42,8 +42,8 @@ pub struct TimeState {
     time_signature: TimeSignature,
     /// Microseconds per quarter note
     microsecspqn: u24,
-    /// Ticks per quarter note (should be fixed)
-    tpqn: u28,
+    /// Ticks per quarter note (should only be mutated at creation)
+    pub tpqn: u15,
 }
 
 impl TimeState {
@@ -70,17 +70,19 @@ impl TimeState {
             * (self.time_signature().denominator as f64 / 4_f64)) as u16
     }
 
-    
+
     pub fn duration_per_tick(&self) -> Duration {
         Duration::from_micros((self.mspqn().as_int() as u64) / (self.tpqn.as_int() as u64))
     }
 
+    pub fn mspqn_from_bpm(bpm: u16, denominator: u32) -> u24 {
+        u24::from_int_lossy(
+            (((ONE_MINUTE_IN_MICROSECONDS) * denominator) as f64 / (bpm * 4) as f64) as u32
+        )
+    }
     /// Sets the MSPQN based on a BPM
     pub fn set_mspqn_from_bpm(&mut self, bpm: u16) {
-        self.set_mspqn(u24::from_int_lossy(
-            ((ONE_MINUTE_IN_MICROSECONDS * self.time_signature().denominator as u32) as f64
-                / (bpm * 4) as f64) as u32,
-        ));
+        self.set_mspqn(Self::mspqn_from_bpm(bpm, self.time_signature.denominator as _));
     }
 
     /// Sets the time signature

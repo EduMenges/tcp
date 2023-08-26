@@ -16,13 +16,12 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
     let mut conn_out = prepare_connection()?;
 
     let mut buf = Vec::new();
-    let ppqn = match file.header.timing {
+    let mut time_state = TimeState::default();
+    let tpqn = match file.header.timing {
         midly::Timing::Metrical(as_u15) => as_u15,
         midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
     };
-
-    // The current Milliseconds Per Quarter Note
-    let mut time_state = TimeState::default();
+    time_state.tpqn = tpqn;
 
     for event in file.tracks[0].iter() {
         if event.delta > 0 {
@@ -112,15 +111,20 @@ mod test {
     }
 
     #[test]
+    fn scale_from_ours() {
+        play("CDEFGABR+C");
+    }
+
+    #[test]
     fn scale_from_mocked_file() {
-        let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale.mid")).unwrap();
+        let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale_200_bpm.mid")).unwrap();
 
         let _ = play_file(&smf);
     }
 
     #[test]
-    fn scale_from_ours() {
-        play("CDEFGABR+C");
+    fn scale_200_bpm() {
+        play("BPM+CDEFGABR+C");
     }
 
 
@@ -140,7 +144,7 @@ mod test {
     #[test]
     /// Contains UP in BPM
     fn tubular_bells(){
-        play("EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EAEB");
+        play("BPM+BPM+R+EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EB");
     }
 
     #[test]

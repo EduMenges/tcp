@@ -1,4 +1,4 @@
-use crate::text_to_midi::*;
+use crate::{text_to_midi::*, time_state::TimeState};
 use midi_msg::MidiMsg;
 use midly::{num::*, *};
 
@@ -19,7 +19,7 @@ impl MIDIaction {
     /// Instant delta
     const INSTANT: u28 = u28::from_int_lossy(0);
     /// Ticks per quarter note
-    pub const D_TPQN: u28 = u28::from_int_lossy(480);
+    pub const D_TPQN: u15 = u15::from_int_lossy(480);
     /// Is 4/4
     const D_TIME_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::TimeSignature(4, 2, 24, 8);
     /// Is C major
@@ -62,6 +62,10 @@ impl MIDIaction {
         }
     }
 
+    fn tpqn_as_u28() -> u28 {
+        u28::from_int_lossy(Self::D_TPQN.as_int() as u32)
+    }
+
     pub fn push_as_event(self, track: &mut Track) {
         match self {
             MIDIaction::PlayNote(note) => {
@@ -76,7 +80,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: Self::D_TPQN,
+                    delta: Self::tpqn_as_u28(),
                     kind: TrackEventKind::Midi {
                         channel: Self::D_CHANNEL,
                         message: MidiMessage::NoteOff {
@@ -119,7 +123,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: Self::D_TPQN,
+                    delta: Self::tpqn_as_u28(),
                     kind: TrackEventKind::Midi {
                         channel: Self::D_CHANNEL,
                         message: MidiMessage::Controller {
@@ -132,7 +136,7 @@ impl MIDIaction {
             MIDIaction::ChangeBPM(bpm) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
-                    kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(bpm_into_micros(bpm))),
+                    kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(TimeState::mspqn_from_bpm(bpm, 4))),
                 });
             }
             MIDIaction::EndTrack => track.push(TrackEvent {

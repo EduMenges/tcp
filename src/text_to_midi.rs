@@ -107,14 +107,6 @@ impl State {
             note: Some(note),
         }
     }
-
-    pub fn get_tempo(&self) -> u24 {
-        bpm_into_micros(self.bpm)
-    }
-}
-
-pub fn bpm_into_micros(bpm: impl Into::<u32>) -> u24 {
-    u24::from_int_lossy(((bpm.into() * 10_u32.pow(6)) / 4) / 60)
 }
 
 impl Default for State {
