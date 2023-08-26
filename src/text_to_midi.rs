@@ -134,9 +134,9 @@ pub struct Sheet {
 }
 
 impl Sheet {
-    const DEFAULT_R_PLUS: char = '東';
-    const DEFAULT_R_MINUS: char = '世';
-    const DEFAULT_BPM_PLUS: char = 'ß';
+    const D_R_PLUS: char = '東';
+    const D_R_MINUS: char = '世';
+    const D_BPM_PLUS: char = 'ß';
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u16, text: impl ToString) -> Self {
@@ -166,16 +166,18 @@ impl Sheet {
             } else if actual_state.volume != self.current_state.volume {
                 ret.push(MIDIaction::ChangeVolume(actual_state.volume));
             } else {
-                if let Some(note) = actual_state.note { match note {
-                    Note::Pause => {
-                        ret.push(MIDIaction::Pause(actual_state.bpm as u32));
+                if let Some(note) = actual_state.note {
+                    match note {
+                        Note::Pause => {
+                            ret.push(MIDIaction::Pause(actual_state.bpm as u32));
+                        }
+                        _ => {
+                            ret.push(MIDIaction::PlayNote(
+                                (note as u8) + 12 * (actual_state.octave + 1),
+                            ));
+                        }
                     }
-                    _ => {
-                        ret.push(MIDIaction::PlayNote(
-                            (note as u8) + 12 * (actual_state.octave + 1),
-                        ));
-                    }
-                } }
+                }
             }
             self.current_state = actual_state;
         }
@@ -188,9 +190,9 @@ impl Sheet {
     pub fn map_substring_to_char(&mut self) -> String {
         let mut text = self
             .text
-            .replace("BPM+", &Sheet::DEFAULT_BPM_PLUS.to_string())
-            .replace("R+", &Sheet::DEFAULT_R_PLUS.to_string())
-            .replace("R-", &Sheet::DEFAULT_R_MINUS.to_string());
+            .replace("BPM+", &Sheet::D_BPM_PLUS.to_string())
+            .replace("R+", &Sheet::D_R_PLUS.to_string())
+            .replace("R-", &Sheet::D_R_MINUS.to_string());
 
         let mut aux = "".to_string();
         let mut prev_char = '\0';
@@ -252,7 +254,7 @@ impl Sheet {
                 }
 
                 //R+
-                Sheet::DEFAULT_R_PLUS => {
+                Sheet::D_R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                     let new_octave = self.current_state.octave + 1;
                     self.current_state.octave = if new_octave > State::MAX_OCTAVE {
@@ -263,12 +265,12 @@ impl Sheet {
                 }
 
                 //R-
-                Sheet::DEFAULT_R_MINUS => {
+                Sheet::D_R_MINUS => {
                     // Diminui UMA oitava;
                     self.current_state.octave = self.current_state.octave.saturating_sub(1);
                 }
                 //BPM+
-                Sheet::DEFAULT_BPM_PLUS => {
+                Sheet::D_BPM_PLUS => {
                     // Aumenta BPM em 80 unidades
                     self.current_state.bpm = self.current_state.bpm.saturating_add(80);
                 }
@@ -331,9 +333,9 @@ mod test {
         let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
-        let mut expected_text = Sheet::DEFAULT_BPM_PLUS.to_string();
-        expected_text.push(Sheet::DEFAULT_R_PLUS);
-        expected_text.push(Sheet::DEFAULT_R_MINUS);
+        let mut expected_text = Sheet::D_BPM_PLUS.to_string();
+        expected_text.push(Sheet::D_R_PLUS);
+        expected_text.push(Sheet::D_R_MINUS);
 
         assert_eq!(expected_text, received_text);
     }

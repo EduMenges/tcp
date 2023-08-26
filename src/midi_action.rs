@@ -24,12 +24,13 @@ impl MIDIaction {
     const D_TIME_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::TimeSignature(4, 2, 24, 8);
     /// Is C major
     const D_KEY_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::KeySignature(0, false);
-    const DEFAULT_MIDI_PORT: midly::MetaMessage<'_> =
+    const D_MIDI_PORT: midly::MetaMessage<'_> =
         midly::MetaMessage::MidiPort(u7::from_int_lossy(0));
-    const TO_BE_ADDED: [MetaMessage<'_>; 3] = [
+    const TO_BE_ADDED: [MetaMessage<'_>; 4] = [
+        MetaMessage::TrackName(b"tcp_out"),
         Self::D_TIME_SIGNATURE,
         Self::D_KEY_SIGNATURE,
-        Self::DEFAULT_MIDI_PORT,
+        Self::D_MIDI_PORT,
     ];
 
     pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
@@ -142,7 +143,7 @@ impl MIDIaction {
                 });
             }
             MIDIaction::EndTrack => track.push(TrackEvent {
-                delta: Self::INSTANT,
+                delta: u28::from_int_lossy(1),
                 kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
             }),
         };

@@ -17,11 +17,10 @@ pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
 
     let mut buf = Vec::new();
     let mut time_state = TimeState::default();
-    let tpqn = match file.header.timing {
+    time_state.tpqn = match file.header.timing {
         midly::Timing::Metrical(as_u15) => as_u15,
         midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
     };
-    time_state.tpqn = tpqn;
 
     for event in file.tracks[0].iter() {
         if event.delta > 0 {
@@ -119,14 +118,17 @@ mod test {
 
     #[test]
     fn scale_from_mocked_file() {
-        let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale_200_bpm.mid")).unwrap();
+        let smf = Smf::parse(include_bytes!("../test-asset/c_major_scale.mid")).unwrap();
 
         let _ = play_file(&smf);
     }
 
     #[test]
     fn scale_200_bpm() {
-        play("BPM+CDEFGABR+C");
+        let actions = text_to_midi::Sheet::new(120, "BPM+CDEFGABR+C");
+        let file = MIDIaction::to_track(&actions.process());
+        let _ = play_file(&file);
+        let _ = file.save("../200bpm.mid");
     }
 
     fn play(text: impl ToString) {
@@ -146,7 +148,17 @@ mod test {
     fn tubular_bells() {
         let start = "BPM+BPM+R+".to_owned();
         let main_loop = "EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EB";
-        play((0..10).fold(start, |acc, _| acc + main_loop + "\n"));
+        let actions = text_to_midi::Sheet::new(140, (0..10).fold(start, |acc, _| acc + main_loop + "\n")).process();
+        let file = MIDIaction::to_track(&actions);
+        let _ = file.save("../tubular_bells.mid");
+        let _ = play_file(&file);
+    }
+
+    #[test]
+    fn play_tubullar_bells() {
+        let smf = Smf::parse(include_bytes!("../tubular_bells.mid")).unwrap();
+
+        let _ = play_file(&smf);
     }
 
     #[test]
