@@ -44,16 +44,16 @@ impl Distribution<Note> for Standard {
 
 impl Note {
     /// A partir de um caractere, cria uma nota.
-    pub fn from_char(ch: char) -> Option<Self> {
+    pub const fn from_char(ch: char) -> Option<Self> {
         match ch {
-            'A' | 'a' => Some(Note::La),
-            'B' | 'b' => Some(Note::Si),
-            'C' | 'c' => Some(Note::Do),
-            'D' | 'd' => Some(Note::Re),
-            'E' | 'e' => Some(Note::Mi),
-            'F' | 'f' => Some(Note::Fa),
-            'G' | 'g' => Some(Note::Sol),
-            ' ' => Some(Note::Pause),
+            'A' | 'a' => Some(Self::La),
+            'B' | 'b' => Some(Self::Si),
+            'C' | 'c' => Some(Self::Do),
+            'D' | 'd' => Some(Self::Re),
+            'E' | 'e' => Some(Self::Mi),
+            'F' | 'f' => Some(Self::Fa),
+            'G' | 'g' => Some(Self::Sol),
+            ' ' => Some(Self::Pause),
             _ => None,
         }
     }
@@ -89,7 +89,7 @@ impl State {
     pub const MAX_BPM: u16 = 360;
 
     /// Cria um estado novo.
-    pub fn new(instrument: u8, octave: u8, volume: u16, bpm: u16, note: Note) -> Self {
+    pub const fn new(instrument: u8, octave: u8, volume: u16, bpm: u16, note: Note) -> Self {
         Self {
             instrument,
             octave,
@@ -104,9 +104,9 @@ impl Default for State {
     fn default() -> Self {
         Self {
             instrument: 0,
-            octave: State::DEFAULT_OCTAVE,
-            volume: State::DEFAULT_VOLUME,
-            bpm: State::DEFAULT_BPM,
+            octave: Self::DEFAULT_OCTAVE,
+            volume: Self::DEFAULT_VOLUME,
+            bpm: Self::DEFAULT_BPM,
             note: Option::default(),
         }
     }
@@ -180,9 +180,9 @@ impl Sheet {
     pub fn map_substring_to_char(&mut self) -> String {
         let text = self
             .text
-            .replace("BPM+", &Sheet::D_BPM_PLUS.to_string())
-            .replace("R+", &Sheet::D_R_PLUS.to_string())
-            .replace("R-", &Sheet::D_R_MINUS.to_string());
+            .replace("BPM+", &Self::D_BPM_PLUS.to_string())
+            .replace("R+", &Self::D_R_PLUS.to_string())
+            .replace("R-", &Self::D_R_MINUS.to_string());
 
         let mut aux = String::new();
         let mut prev_char = '\0';
@@ -242,7 +242,7 @@ impl Sheet {
                 }
 
                 //R+
-                Sheet::D_R_PLUS => {
+                Self::D_R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                     let new_octave = self.current_state.octave + 1;
                     self.current_state.octave = if new_octave > State::MAX_OCTAVE {
@@ -253,12 +253,12 @@ impl Sheet {
                 }
 
                 //R-
-                Sheet::D_R_MINUS => {
+                Self::D_R_MINUS => {
                     // Diminui UMA oitava;
                     self.current_state.octave = self.current_state.octave.saturating_sub(1);
                 }
                 //BPM+
-                Sheet::D_BPM_PLUS => {
+                Self::D_BPM_PLUS => {
                     // Aumenta BPM em 80 unidades
                     self.current_state.bpm = self.current_state.bpm.saturating_add(80);
                 }

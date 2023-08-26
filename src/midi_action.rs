@@ -68,7 +68,7 @@ impl MidiAction {
 
     pub fn push_as_event(self, track: &mut Track) {
         match self {
-            MidiAction::PlayNote(note) => {
+            Self::PlayNote(note) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -90,7 +90,7 @@ impl MidiAction {
                     },
                 });
             }
-            MidiAction::ChangeInstrument(instrument) => {
+            Self::ChangeInstrument(instrument) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -101,7 +101,7 @@ impl MidiAction {
                     },
                 });
             }
-            MidiAction::ChangeVolume(volume) => track.push(TrackEvent {
+            Self::ChangeVolume(volume) => track.push(TrackEvent {
                 delta: Self::INSTANT,
                 kind: TrackEventKind::Midi {
                     channel: Self::D_CHANNEL,
@@ -111,7 +111,7 @@ impl MidiAction {
                     },
                 },
             }),
-            MidiAction::Pause => {
+            Self::Pause => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -133,7 +133,7 @@ impl MidiAction {
                     },
                 });
             }
-            MidiAction::ChangeBPM(bpm) => {
+            Self::ChangeBPM(bpm) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: midly::TrackEventKind::Meta(MetaMessage::Tempo(
@@ -141,7 +141,7 @@ impl MidiAction {
                     )),
                 });
             }
-            MidiAction::EndTrack => track.push(TrackEvent {
+            Self::EndTrack => track.push(TrackEvent {
                 delta: u28::from_int_lossy(1),
                 kind: TrackEventKind::Meta(MetaMessage::EndOfTrack),
             }),
