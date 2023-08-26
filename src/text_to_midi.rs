@@ -6,10 +6,11 @@ use rand::{
 use crate::midi_action::MIDIaction;
 
 /// Enum com as notas possíveis.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(u8)]
 pub enum Note {
     /// Nota dó.
+    #[default]
     Do = 0,
     /// Nota ré.
     Re = 2,
@@ -55,12 +56,6 @@ impl Note {
             ' ' => Some(Note::Pause),
             _ => None,
         }
-    }
-}
-
-impl Default for Note {
-    fn default() -> Self {
-        Note::Do
     }
 }
 
@@ -161,20 +156,19 @@ impl Sheet {
                 ret.push(MIDIaction::ChangeInstrument(actual_state.instrument));
             } else if actual_state.volume != self.current_state.volume {
                 ret.push(MIDIaction::ChangeVolume(actual_state.volume));
-            } else {
-                if let Some(note) = actual_state.note {
-                    match note {
-                        Note::Pause => {
-                            ret.push(MIDIaction::Pause);
-                        }
-                        _ => {
-                            ret.push(MIDIaction::PlayNote(
-                                (note as u8) + 12 * (actual_state.octave + 1),
-                            ));
-                        }
+            } else if let Some(note) = actual_state.note {
+                match note {
+                    Note::Pause => {
+                        ret.push(MIDIaction::Pause);
+                    }
+                    _ => {
+                        ret.push(MIDIaction::PlayNote(
+                            (note as u8) + 12 * (actual_state.octave + 1),
+                        ));
                     }
                 }
             }
+
             self.current_state = actual_state;
         }
 
@@ -205,7 +199,7 @@ impl Sheet {
             prev_char = c;
         }
 
-        return aux;
+        aux
     }
 
     pub fn process_text(&mut self) {
@@ -244,7 +238,7 @@ impl Sheet {
                     // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
                     self.current_state.instrument = 125;
                     self.current_state.note = Some(Note::Do);
-                    let aux_state = self.states.last().unwrap().clone();
+                    let aux_state = *self.states.last().unwrap();
                     self.states.push(self.current_state);
                     self.current_state = aux_state;
                 }

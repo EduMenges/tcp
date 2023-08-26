@@ -8,11 +8,11 @@ use crate::time_state::*;
 
 use midir::{MidiOutput, MidiOutputPort};
 
-use midly::{Smf};
+use midly::Smf;
 
 
 
-pub fn play_file<'a>(file: &Smf<'a>) -> Result<(), Box<dyn Error>> {
+pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     let mut conn_out = prepare_connection()?;
 
     let mut buf = Vec::new();

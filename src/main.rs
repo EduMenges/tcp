@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 mod midi_action;
 mod play;
 mod text_to_midi;

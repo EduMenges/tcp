@@ -35,7 +35,7 @@ impl MIDIaction {
     pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
         let header: Header = Header {
             format: midly::Format::SingleTrack,
-            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::D_TPQN.as_int() as u16)),
+            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::D_TPQN.as_int())),
         };
         let mut smf = Smf::new(header);
 
