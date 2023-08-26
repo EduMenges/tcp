@@ -14,20 +14,20 @@ use crate::midi_action::MIDIaction;
 #[repr(u8)]
 pub enum Note {
     /// Nota dó.
-    Do,
+    Do = 0,
     /// Nota ré.
-    Re,
+    Re = 2,
     /// Nota mi.
-    Mi,
+    Mi = 4,
     /// Nota fa.
-    Fa,
+    Fa = 5,
     /// Nota sol.
-    Sol,
+    Sol = 7,
     /// Nota la.
-    La,
+    La = 9,
     /// Nota si.
-    Si,
-    /// Nota pause.
+    Si = 11,
+    /// Nota de pausa.
     Pause,
 }
 
