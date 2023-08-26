@@ -5,11 +5,11 @@ use midly::{num::*, *};
 /// Enum representando as possíveis ações de MIDI.
 #[derive(Clone, Copy)]
 pub enum MIDIaction {
-    PlayNote { bpm: u32, note: u8 },
+    PlayNote(u8),
     ChangeInstrument(u8),
     ChangeVolume(u16),
     Pause(u32),
-    ChangeBPM(u8),
+    ChangeBPM(u16),
     EndTrack,
 }
 
@@ -18,12 +18,12 @@ impl MIDIaction {
     const D_VELOCITY: u7 = u7::from_int_lossy(127 / 2);
     /// Instant delta
     const INSTANT: u28 = u28::from_int_lossy(0);
-    /// Pulses Per Quarter Note
-    pub const D_PPQN: u16 = 480;
+    /// Ticks per quarter note
+    pub const D_TPQN: u28 = u28::from_int_lossy(480);
     /// Is 4/4
-    const D_TIME_SIGNATURE: midly::MetaMessage<'_> = midly::MetaMessage::TimeSignature(4, 2, 24, 8);
+    const D_TIME_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::TimeSignature(4, 2, 24, 8);
     /// Is C major
-    const D_KEY_SIGNATURE: midly::MetaMessage<'_> = midly::MetaMessage::KeySignature(0, false);
+    const D_KEY_SIGNATURE: MetaMessage<'_> = midly::MetaMessage::KeySignature(0, false);
     const DEFAULT_MIDI_PORT: midly::MetaMessage<'_> =
         midly::MetaMessage::MidiPort(u7::from_int_lossy(0));
     const TO_BE_ADDED: [MetaMessage<'_>; 3] = [
@@ -35,7 +35,7 @@ impl MIDIaction {
     pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
         let header: Header = Header {
             format: midly::Format::SingleTrack,
-            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::D_PPQN)),
+            timing: midly::Timing::Metrical(u15::from_int_lossy(Self::D_TPQN.as_int() as u16)),
         };
         let mut smf = Smf::new(header);
 
@@ -53,10 +53,6 @@ impl MIDIaction {
         smf
     }
 
-    fn bpm_into_ticks(bpm: u32) -> u28 {
-        u28::from_int_lossy(60_000_000 / (bpm * Self::D_PPQN as u32))
-    }
-
     fn add_beggining(track: &mut Track) {
         for message in Self::TO_BE_ADDED {
             track.push(TrackEvent {
@@ -68,7 +64,7 @@ impl MIDIaction {
 
     pub fn push_as_event(self, track: &mut Track) {
         match self {
-            MIDIaction::PlayNote { bpm, note } => {
+            MIDIaction::PlayNote(note) => {
                 track.push(TrackEvent {
                     delta: Self::INSTANT,
                     kind: TrackEventKind::Midi {
@@ -80,7 +76,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: Self::bpm_into_ticks(bpm),
+                    delta: Self::D_TPQN,
                     kind: TrackEventKind::Midi {
                         channel: Self::D_CHANNEL,
                         message: MidiMessage::NoteOff {
@@ -123,7 +119,7 @@ impl MIDIaction {
                     },
                 });
                 track.push(TrackEvent {
-                    delta: Self::bpm_into_ticks(bpm),
+                    delta: Self::D_TPQN,
                     kind: TrackEventKind::Midi {
                         channel: Self::D_CHANNEL,
                         message: MidiMessage::Controller {
