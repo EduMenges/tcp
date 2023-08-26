@@ -120,7 +120,7 @@ mod test {
 
     #[test]
     fn from_ours() {
-        let mut test = text_to_midi::Sheet::new(120, "CDEFGAB");
+        let mut test = text_to_midi::Sheet::new(120, "CDEFGABR+C");
         test.process_text();
         let actions = test.process();
 
