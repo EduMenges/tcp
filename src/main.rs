@@ -4,6 +4,7 @@ mod midi_action;
 mod play;
 mod text_to_midi;
 mod time_state;
+mod note;
 extern crate midir;
 
 use text_to_midi::Sheet;
