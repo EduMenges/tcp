@@ -172,8 +172,6 @@ impl Sheet {
             self.current_state = actual_state;
         }
 
-        ret.push(MidiAction::EndTrack);
-
         ret
     }
 
