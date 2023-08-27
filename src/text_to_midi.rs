@@ -1,63 +1,7 @@
-use rand::{
-    distributions::{Distribution, Standard},
-    Rng,
-};
+use rand::Rng;
 
 use crate::midi_action::MidiAction;
-
-/// Enum com as notas possíveis.
-#[derive(Clone, Copy, Default)]
-#[repr(u8)]
-pub enum Note {
-    /// Nota dó.
-    #[default]
-    Do = 0,
-    /// Nota ré.
-    Re = 2,
-    /// Nota mi.
-    Mi = 4,
-    /// Nota fa.
-    Fa = 5,
-    /// Nota sol.
-    Sol = 7,
-    /// Nota la.
-    La = 9,
-    /// Nota si.
-    Si = 11,
-    /// Nota de pausa.
-    Pause,
-}
-
-impl Distribution<Note> for Standard {
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Note {
-        match rng.gen_range(0..=6) {
-            0 => Note::Do,
-            1 => Note::Re,
-            2 => Note::Mi,
-            3 => Note::Fa,
-            4 => Note::Sol,
-            5 => Note::La,
-            _ => Note::Si,
-        }
-    }
-}
-
-impl Note {
-    /// A partir de um caractere, cria uma nota.
-    pub const fn from_char(ch: char) -> Option<Self> {
-        match ch {
-            'A' | 'a' => Some(Self::La),
-            'B' | 'b' => Some(Self::Si),
-            'C' | 'c' => Some(Self::Do),
-            'D' | 'd' => Some(Self::Re),
-            'E' | 'e' => Some(Self::Mi),
-            'F' | 'f' => Some(Self::Fa),
-            'G' | 'g' => Some(Self::Sol),
-            ' ' => Some(Self::Pause),
-            _ => None,
-        }
-    }
-}
+use crate::note::*;
 
 /// Estrutura que guarda o estado atual da música.
 #[derive(Clone, Copy)]
@@ -75,17 +19,22 @@ pub struct State {
 }
 
 impl State {
+    /// A oitava padrão.
+    pub const D_OCTAVE: u8 = 4;
+
     /// A máxima oitava possível.
     pub const MAX_OCTAVE: u8 = 12;
-    /// A oitava padrão.
-    pub const DEFAULT_OCTAVE: u8 = 4;
-    /// O volume padrão.
-    pub const DEFAULT_VOLUME: u16 = 100;
 
+    /// O volume padrão.
+    pub const D_VOLUME: u16 = 100;
+
+    /// O volume máximo.
     pub const MAX_VOLUME: u16 = u16::MAX >> 1;
 
-    pub const DEFAULT_BPM: u16 = 120;
+    /// O BPM padrão.
+    pub const D_BPM: u16 = 120;
 
+    /// O BPM máximo.
     pub const MAX_BPM: u16 = 360;
 
     /// Cria um estado novo.
@@ -104,9 +53,9 @@ impl Default for State {
     fn default() -> Self {
         Self {
             instrument: 0,
-            octave: Self::DEFAULT_OCTAVE,
-            volume: Self::DEFAULT_VOLUME,
-            bpm: Self::DEFAULT_BPM,
+            octave: Self::D_OCTAVE,
+            volume: Self::D_VOLUME,
+            bpm: Self::D_BPM,
             note: Option::default(),
         }
     }
@@ -125,9 +74,9 @@ pub struct Sheet {
 }
 
 impl Sheet {
-    const D_R_PLUS: char = '東';
-    const D_R_MINUS: char = '世';
-    const D_BPM_PLUS: char = 'ß';
+    const R_PLUS: char = '東';
+    const R_MINUS: char = '世';
+    const BPM_PLUS: char = 'ß';
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
     pub fn new(bpm: u16, text: impl ToString) -> Self {
@@ -139,7 +88,7 @@ impl Sheet {
         }
     }
 
-    /// Pegar o vetor com os estados e aplicar as mudanças conforme a especificação
+    /// Pega o vetor com os estados e aplica as mudanças conforme a especificação.
     pub fn process(mut self) -> Vec<MidiAction> {
         self.process_text();
         let mut ret = Vec::<MidiAction>::new();
@@ -161,9 +110,9 @@ impl Sheet {
                     Note::Pause => {
                         ret.push(MidiAction::Pause);
                     }
-                    _ => {
+                    note => {
                         ret.push(MidiAction::PlayNote(
-                            (note as u8) + 12 * (actual_state.octave + 1),
+                            note.to_midi(self.current_state.octave),
                         ));
                     }
                 }
@@ -172,17 +121,15 @@ impl Sheet {
             self.current_state = actual_state;
         }
 
-        ret.push(MidiAction::EndTrack);
-
         ret
     }
 
     pub fn map_substring_to_char(&mut self) -> String {
         let text = self
             .text
-            .replace("BPM+", &Self::D_BPM_PLUS.to_string())
-            .replace("R+", &Self::D_R_PLUS.to_string())
-            .replace("R-", &Self::D_R_MINUS.to_string());
+            .replace("BPM+", &Self::BPM_PLUS.to_string())
+            .replace("R+", &Self::R_PLUS.to_string())
+            .replace("R-", &Self::R_MINUS.to_string());
 
         let mut aux = String::new();
         let mut prev_char = '\0';
@@ -214,6 +161,7 @@ impl Sheet {
     fn parse_char(&mut self, ch: char) {
         // ABCDEFG
         let new_note: Option<Note> = Note::from_char(ch);
+
         if let Some(note) = new_note {
             self.current_state.note = Some(note);
         } else {
@@ -230,7 +178,7 @@ impl Sheet {
                 }
                 '-' => {
                     // Volume retorna ao volume padrão
-                    self.current_state.volume = State::DEFAULT_VOLUME;
+                    self.current_state.volume = State::D_VOLUME;
                 }
                 'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
                     // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
@@ -240,48 +188,41 @@ impl Sheet {
                     self.states.push(self.current_state);
                     self.current_state = aux_state;
                 }
-
-                //R+
-                Self::D_R_PLUS => {
+                Self::R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                     let new_octave = self.current_state.octave + 1;
                     self.current_state.octave = if new_octave > State::MAX_OCTAVE {
-                        State::DEFAULT_OCTAVE
+                        State::D_OCTAVE
                     } else {
                         new_octave
                     };
                 }
-
-                //R-
-                Self::D_R_MINUS => {
-                    // Diminui UMA oitava;
+                Self::R_MINUS => {
+                    // Diminui uma oitava;
                     self.current_state.octave = self.current_state.octave.saturating_sub(1);
                 }
-                //BPM+
-                Self::D_BPM_PLUS => {
+                Self::BPM_PLUS => {
                     // Aumenta BPM em 80 unidades
                     self.current_state.bpm = self.current_state.bpm.saturating_add(80);
                 }
-
                 '?' => {
-                    //Toca uma nota aleatória (de A a G), randomicamente escolhida
+                    // Toca uma nota aleatória (de A a G), randomicamente escolhida
                     let mut rng = rand::thread_rng();
                     let random_note: Note = rng.gen();
                     self.current_state.note = Some(random_note);
                 }
-
                 '\n' => {
-                    //Trocar instrumento aleatorio
+                    // Troca para um instrumento aleatorio
                     let mut rng = rand::thread_rng();
                     self.current_state.instrument = rng.gen_range(0..=i8::MAX as u8);
                 }
-
                 ';' => {
-                    //Atribui valor aleatorio ao BPM
+                    // Atribui valor aleatorio ao BPM
                     let mut rng = rand::thread_rng();
                     self.current_state.bpm = rng.gen_range(1..State::MAX_BPM);
                 }
-                _ => {}
+                _ => { // NOP
+                }
             }
         }
 
@@ -296,7 +237,7 @@ mod test {
     #[test]
     fn match_process_general_text_behavior() {
         let text = "; \nasBPM+ ?!;-+".to_string();
-        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let mut sheet = Sheet::new(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "; \nasß ?!;-+".to_string();
@@ -307,7 +248,7 @@ mod test {
     #[test]
     fn match_process_note_text_behavior() {
         let text = "AaBbCcDdEeFfGg".to_string();
-        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let mut sheet = Sheet::new(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "AaBbCcDdEeFfGg".to_string();
@@ -318,12 +259,12 @@ mod test {
     #[test]
     fn match_process_substring_text_behavior() {
         let text = "BPM+R+R-".to_string();
-        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let mut sheet = Sheet::new(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
-        let mut expected_text = Sheet::D_BPM_PLUS.to_string();
-        expected_text.push(Sheet::D_R_PLUS);
-        expected_text.push(Sheet::D_R_MINUS);
+        let mut expected_text = Sheet::BPM_PLUS.to_string();
+        expected_text.push(Sheet::R_PLUS);
+        expected_text.push(Sheet::R_MINUS);
 
         assert_eq!(expected_text, received_text);
     }
@@ -331,7 +272,7 @@ mod test {
     #[test]
     fn match_process_vogals_text_behavior() {
         let text = "OoIiUuAiBICuDUEoFo".to_string();
-        let mut sheet = Sheet::new(State::DEFAULT_BPM, text);
+        let mut sheet = Sheet::new(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "OoIiUuAABBCCDDEEFF".to_string();

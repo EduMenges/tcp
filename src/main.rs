@@ -5,6 +5,7 @@ mod play;
 mod text_to_midi;
 mod time_state;
 pub mod user_interface;
+mod note;
 extern crate midir;
 
 use text_to_midi::Sheet;

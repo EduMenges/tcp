@@ -10,8 +10,9 @@ use midir::{MidiOutput, MidiOutputPort};
 
 use midly::Smf;
 
-
-
+/// Reproduz o dado arquivo com os sintetizadores disponíveis no sistema.
+/// 
+/// Caso o arquivo passado não seja codificado em métrico, retorna erro.
 pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     let mut conn_out = prepare_connection()?;
 
@@ -19,7 +20,7 @@ pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     let mut time_state = TimeState::default();
     time_state.tpqn = match file.header.timing {
         midly::Timing::Metrical(as_u15) => as_u15,
-        midly::Timing::Timecode(_, _) => panic!("Only headers with Metrical coding can be parsed"),
+        midly::Timing::Timecode(_, _) => return Err("The timing of the received file is not coded with metrical.".into()),
     };
 
     for event in &file.tracks[0] {
@@ -55,11 +56,12 @@ pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+/// Abre uma conexão com uma das portas MIDI disponíveis.
 fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
-    let midi_out = MidiOutput::new("Output")?;
+    let midi_out = MidiOutput::new("TCP")?;
     let out_ports = midi_out.ports();
     let out_port: &MidiOutputPort = match out_ports.len() {
-        0 => return Err("no output port found".into()),
+        0 => return Err("No output port found.".into()),
         1 => {
             println!(
                 "Choosing the only available output port: {}",
@@ -76,16 +78,20 @@ fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
 
             print!("Please select output port: ");
             stdout().flush()?;
+
             let mut input = String::new();
             stdin().read_line(&mut input)?;
+            
             out_ports
                 .get(input.trim().parse::<usize>()?)
                 .ok_or("Invalid output port selected.")?
         }
     };
     println!("Opening connection");
+
     let conn_out = midi_out.connect(out_port, "midir")?;
     println!("Connection open");
+
     Ok(conn_out)
 }
 
@@ -148,7 +154,9 @@ mod test {
     fn tubular_bells() {
         let start = "BPM+BPM+R+".to_owned();
         let main_loop = "EAEBEGAER+CR-ER+DR-EBR+CR-EAEBEGAER+CR-ER+DR-EBR+CR-EB";
-        let actions = text_to_midi::Sheet::new(140, (0..10).fold(start, |acc, _| acc + main_loop + "\n")).process();
+        let actions =
+            text_to_midi::Sheet::new(140, (0..10).fold(start, |acc, _| acc + main_loop + "\n"))
+                .process();
         let file = MidiAction::to_track(&actions);
         let _ = file.save("../tubular_bells.mid");
         let _ = play_file(&file);
@@ -165,7 +173,9 @@ mod test {
     }
 
     #[test]
-    fn major_scale_with_volume() { play("C+D+E+F+G+A+B+")}
+    fn major_scale_with_volume() {
+        play("C+D+E+F+G+A+B+")
+    }
 
     #[test]
     /// Should play telephone sound
