@@ -33,7 +33,7 @@ impl App for UserInterface {
 
                 if (ui.button("Play")).clicked() {
                     let test =
-                        text_to_midi::Sheet::new(State::DEFAULT_BPM, self.file_content.to_string());
+                        text_to_midi::Sheet::new(State::D_BPM, self.file_content.to_string());
                     let actions = test.process();
                     let file = MidiAction::to_track(&actions);
                     let _ = play_file(&file);
@@ -62,7 +62,7 @@ impl App for UserInterface {
                         if let Some(file) = dialog.path() {
                             self.saved_file = Some(file.to_path_buf());
                             let test = text_to_midi::Sheet::new(
-                                State::DEFAULT_BPM,
+                                State::D_BPM,
                                 self.file_content.to_string(),
                             );
                             let actions = test.process();
