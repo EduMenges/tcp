@@ -51,7 +51,7 @@ impl MidiAction {
 
     /// Transofrma uma sequência de ações em uma trilha válida do MIDI, adicionando
     /// todo o boiler-plate necessário para sua correta reprodução.
-    pub fn to_track<'a>(slice: &[Self]) -> Smf<'a> {
+    pub fn as_track<'a>(slice: &[Self]) -> Smf<'a> {
         let header: Header = Header {
             format: midly::Format::SingleTrack,
             timing: midly::Timing::Metrical(u15::from_int_lossy(Self::D_TPQN.as_int())),

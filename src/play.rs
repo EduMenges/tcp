@@ -126,8 +126,8 @@ mod test {
 
     #[test]
     fn scale_200_bpm() {
-        let actions = text_to_midi::Sheet::new(120, "BPM+CDEFGABR+C");
-        let file = MidiAction::to_track(&actions.process());
+        let actions = text_to_midi::Sheet::new(200, "CDEFGABR+C");
+        let file = MidiAction::as_track(&actions.process());
         let _ = play_file(&file);
         let _ = file.save("../200bpm.mid");
     }
@@ -148,7 +148,7 @@ mod test {
         let test = text_to_midi::Sheet::new(120, text.to_string());
         let actions = test.process();
 
-        let _ = play_file(&MidiAction::to_track(&actions));
+        let _ = play_file(&MidiAction::as_track(&actions));
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod test {
         let actions =
             text_to_midi::Sheet::new(140, (0..10).fold(start, |acc, _| acc + main_loop + "\n"))
                 .process();
-        let file = MidiAction::to_track(&actions);
+        let file = MidiAction::as_track(&actions);
         let _ = file.save("../tubular_bells.mid");
         let _ = play_file(&file);
     }

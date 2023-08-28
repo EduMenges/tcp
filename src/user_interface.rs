@@ -49,7 +49,7 @@ impl App for UserInterface {
                     let test =
                         text_to_midi::Sheet::new(self.bpm, self.file_content.to_string());
                     let actions = test.process();
-                    let file = MidiAction::to_track(&actions);
+                    let file = MidiAction::as_track(&actions);
                     println!("{}", self.bpm);
 
                     let _ = play_file(&file);
@@ -85,7 +85,7 @@ impl App for UserInterface {
                                 self.file_content.to_string(),
                             );
                             let actions = test.process();
-                            let midi_file = MidiAction::to_track(&actions);
+                            let midi_file = MidiAction::as_track(&actions);
 
                             if let Some(saved_file) = &self.saved_file {
                                 let mut saved_file = saved_file.clone();
