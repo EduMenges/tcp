@@ -184,8 +184,17 @@ impl Sheet {
                     self.current_state.volume = State::D_VOLUME;
                 }
                 'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
+                    // Nesse caso, quando não há uma nota anterior, altera o instrumento para o telefone
+                    let aux = self.current_state;
 
                     self.current_state.instrument = 124;
+                    self.states.push(self.current_state);
+
+                    self.current_state.note = Some(Note::Fa);
+                    self.states.push(self.current_state);
+
+                    self.current_state = aux;
+                }
                 Self::R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
                     let new_octave = self.current_state.octave + 1;
