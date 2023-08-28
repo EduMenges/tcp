@@ -49,7 +49,7 @@ impl App for UserInterface {
 
                 if (ui.button("Play")).clicked() {
                     let test =
-                        text_to_midi::Sheet::new(self.bpm, self.file_content.to_string());
+                        text_to_midi::Sheet::new(self.bpm, self.volume, self.file_content.to_string());
                     let actions = test.process();
                     let file = MidiAction::as_track(&actions);
                     println!("{}", self.bpm);
@@ -87,6 +87,7 @@ impl App for UserInterface {
                             self.saved_file = Some(file.to_path_buf());
                             let test = text_to_midi::Sheet::new(
                                 self.bpm,
+                                self.volume,
                                 self.file_content.to_string(),
                             );
                             let actions = test.process();

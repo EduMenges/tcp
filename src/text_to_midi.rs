@@ -29,7 +29,7 @@ impl State {
     pub const D_VOLUME: u16 = 50;
 
     /// O volume máximo.
-    pub const MAX_VOLUME: u16 = 127;
+    pub const MAX_VOLUME: u16 = i8::MAX as u16;
 
     /// O BPM padrão.
     pub const D_BPM: u16 = 120;
@@ -77,9 +77,23 @@ impl Sheet {
     const R_PLUS: char = '東';
     const R_MINUS: char = '世';
     const BPM_PLUS: char = 'ß';
+    const TELEPHONE_PROGRAM: u8 = 124;
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
-    pub fn new(bpm: u16, text: impl ToString) -> Self {
+    pub fn new(bpm: u16, volume: u16, text: impl ToString) -> Self {
+        Self {
+            bpm,
+            states: Vec::new(),
+            text: text.to_string(),
+            current_state: State {
+                bpm,
+                volume,
+                ..Default::default()
+            },
+        }
+    }
+
+    pub fn with_default_volume(bpm: u16, text: impl ToString) -> Self {
         Self {
             bpm,
             states: Vec::new(),
@@ -187,7 +201,7 @@ impl Sheet {
                     // Nesse caso, quando não há uma nota anterior, altera o instrumento para o telefone
                     let aux = self.current_state;
 
-                    self.current_state.instrument = 124;
+                    self.current_state.instrument = Self::TELEPHONE_PROGRAM;
                     self.states.push(self.current_state);
 
                     self.current_state.note = Some(Note::Fa);
@@ -244,7 +258,7 @@ mod test {
     #[test]
     fn match_process_general_text_behavior() {
         let text = "; \nasBPM+ ?!;-+".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "; \nasß ?!;-+".to_string();
@@ -255,7 +269,7 @@ mod test {
     #[test]
     fn match_process_note_text_behavior() {
         let text = "AaBbCcDdEeFfGg".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "AaBbCcDdEeFfGg".to_string();
@@ -266,7 +280,7 @@ mod test {
     #[test]
     fn match_process_substring_text_behavior() {
         let text = "BPM+R+R-".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let mut expected_text = Sheet::BPM_PLUS.to_string();
@@ -279,7 +293,7 @@ mod test {
     #[test]
     fn match_process_vogals_text_behavior() {
         let text = "OoIiUuAiBICuDUEoFo".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "OoIiUuAABBCCDDEEFF".to_string();
