@@ -141,7 +141,7 @@ mod test {
 
     #[test]
     fn twinkle_ours() {
-        let _ = play("CCGGAAG+ FFEEDDC+ GGFFEED+ GGFFEED+ CCGGAAG+ FFEEDDC");
+        let _ = play("CCGGAAG FFEEDDC GGFFEED GGFFEED CCGGAAG FFEEDDC");
     }
 
     fn play(text: impl ToString) {
