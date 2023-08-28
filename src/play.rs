@@ -11,7 +11,7 @@ use midir::{MidiOutput, MidiOutputPort};
 use midly::Smf;
 
 /// Reproduz o dado arquivo com os sintetizadores disponíveis no sistema.
-/// 
+///
 /// Caso o arquivo passado não seja codificado em métrico, retorna erro.
 pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     let mut conn_out = prepare_connection()?;
@@ -20,7 +20,9 @@ pub fn play_file(file: &Smf<'_>) -> Result<(), Box<dyn Error>> {
     let mut time_state = TimeState::default();
     time_state.tpqn = match file.header.timing {
         midly::Timing::Metrical(as_u15) => as_u15,
-        midly::Timing::Timecode(_, _) => return Err("The timing of the received file is not coded with metrical.".into()),
+        midly::Timing::Timecode(_, _) => {
+            return Err("The timing of the received file is not coded with metrical.".into())
+        }
     };
 
     for event in &file.tracks[0] {
@@ -81,7 +83,7 @@ fn prepare_connection() -> Result<midir::MidiOutputConnection, Box<dyn Error>> {
 
             let mut input = String::new();
             stdin().read_line(&mut input)?;
-            
+
             out_ports
                 .get(input.trim().parse::<usize>()?)
                 .ok_or("Invalid output port selected.")?
@@ -111,13 +113,6 @@ mod test {
     }
 
     #[test]
-    fn from_regular_file() {
-        let smf = Smf::parse(include_bytes!("../test-asset/twinkle.mid")).unwrap();
-
-        let _ = play_file(&smf);
-    }
-
-    #[test]
     fn scale_from_ours() {
         play("CDEFGABR+C");
     }
@@ -135,6 +130,18 @@ mod test {
         let file = MidiAction::to_track(&actions.process());
         let _ = play_file(&file);
         let _ = file.save("../200bpm.mid");
+    }
+
+    #[test]
+    fn twinkle_mocked() {
+        let smf = Smf::parse(include_bytes!("../test-asset/twinkle.mid")).unwrap();
+
+        let _ = play_file(&smf);
+    }
+
+    #[test]
+    fn twinkle_ours() {
+        let _ = play("CCGGAAG+ FFEEDDC+ GGFFEED+ GGFFEED+ CCGGAAG+ FFEEDDC");
     }
 
     fn play(text: impl ToString) {
