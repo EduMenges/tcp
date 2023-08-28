@@ -20,6 +20,7 @@ pub struct UserInterface {
     saved_file_dialog: Option<FileDialog>,
     file_content: String,
     bpm: u16,
+    volume: u16
 }
 
 impl UserInterface {
@@ -31,6 +32,7 @@ impl UserInterface {
             saved_file_dialog: None,
             file_content: String::new(),
             bpm: State::D_BPM,
+            volume: State::D_VOLUME
         }
     }
 }
@@ -63,6 +65,9 @@ impl App for UserInterface {
                 }
 
                 ui.add(egui::Slider::new(&mut self.bpm, 0..=State::MAX_BPM).text("BPM"));           
+
+                ui.add(egui::Slider::new(&mut self.volume, 0..=State::MAX_VOLUME).text("Volume"));           
+
 
                 if let Some(dialog) = &mut self.open_file_dialog {
                     if dialog.show(ctx).selected() {

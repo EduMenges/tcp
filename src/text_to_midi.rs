@@ -26,10 +26,10 @@ impl State {
     pub const MAX_OCTAVE: u8 = 12;
 
     /// O volume padrão.
-    pub const D_VOLUME: u16 = 100;
+    pub const D_VOLUME: u16 = 50;
 
     /// O volume máximo.
-    pub const MAX_VOLUME: u16 = u16::MAX >> 1;
+    pub const MAX_VOLUME: u16 = 127;
 
     /// O BPM padrão.
     pub const D_BPM: u16 = 120;
