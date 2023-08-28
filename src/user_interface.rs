@@ -19,6 +19,22 @@ pub struct UserInterface {
     open_file_dialog: Option<FileDialog>,
     saved_file_dialog: Option<FileDialog>,
     file_content: String,
+    bpm: u16,
+    volume: u16
+}
+
+impl UserInterface {
+    pub fn new_interface() -> Self {
+        UserInterface {
+            opened_file: None,
+            saved_file: None,
+            open_file_dialog: None,
+            saved_file_dialog: None,
+            file_content: String::new(),
+            bpm: State::D_BPM,
+            volume: State::D_VOLUME
+        }
+    }
 }
 
 impl App for UserInterface {
@@ -33,10 +49,13 @@ impl App for UserInterface {
 
                 if (ui.button("Play")).clicked() {
                     let test =
-                        text_to_midi::Sheet::new(State::D_BPM, self.file_content.to_string());
+                        text_to_midi::Sheet::new(self.bpm, self.volume, self.file_content.to_string());
                     let actions = test.process();
-                    let file = MidiAction::to_track(&actions);
+                    let file = MidiAction::as_track(&actions);
+                    println!("{}", self.bpm);
+
                     let _ = play_file(&file);
+
                 }
 
                 if (ui.button("Save")).clicked() {
@@ -44,6 +63,11 @@ impl App for UserInterface {
                     dialog.open();
                     self.saved_file_dialog = Some(dialog);
                 }
+
+                ui.add(egui::Slider::new(&mut self.bpm, 0..=State::MAX_BPM).text("BPM"));           
+
+                ui.add(egui::Slider::new(&mut self.volume, 0..=State::MAX_VOLUME).text("Volume"));           
+
 
                 if let Some(dialog) = &mut self.open_file_dialog {
                     if dialog.show(ctx).selected() {
@@ -62,11 +86,12 @@ impl App for UserInterface {
                         if let Some(file) = dialog.path() {
                             self.saved_file = Some(file.to_path_buf());
                             let test = text_to_midi::Sheet::new(
-                                State::D_BPM,
+                                self.bpm,
+                                self.volume,
                                 self.file_content.to_string(),
                             );
                             let actions = test.process();
-                            let midi_file = MidiAction::to_track(&actions);
+                            let midi_file = MidiAction::as_track(&actions);
 
                             if let Some(saved_file) = &self.saved_file {
                                 let mut saved_file = saved_file.clone();

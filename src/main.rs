@@ -14,6 +14,6 @@ fn main() {
     eframe::run_native(
         "Text to MIDI",
         eframe::NativeOptions::default(),
-        Box::new(|_cc| Box::new(UserInterface::default())),
+        Box::new(|_cc| Box::new(UserInterface::new_interface())),
     );
 }

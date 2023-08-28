@@ -26,10 +26,10 @@ impl State {
     pub const MAX_OCTAVE: u8 = 12;
 
     /// O volume padrão.
-    pub const D_VOLUME: u16 = 100;
+    pub const D_VOLUME: u16 = 50;
 
     /// O volume máximo.
-    pub const MAX_VOLUME: u16 = u16::MAX >> 1;
+    pub const MAX_VOLUME: u16 = i8::MAX as u16;
 
     /// O BPM padrão.
     pub const D_BPM: u16 = 120;
@@ -77,14 +77,31 @@ impl Sheet {
     const R_PLUS: char = '東';
     const R_MINUS: char = '世';
     const BPM_PLUS: char = 'ß';
+    const TELEPHONE_PROGRAM: u8 = 124;
 
     /// Cria uma nova partitura a partir de uma BPM básica e um texto.
-    pub fn new(bpm: u16, text: impl ToString) -> Self {
+    pub fn new(bpm: u16, volume: u16, text: impl ToString) -> Self {
         Self {
             bpm,
             states: Vec::new(),
             text: text.to_string(),
-            current_state: State::default(),
+            current_state: State {
+                bpm,
+                volume,
+                ..Default::default()
+            },
+        }
+    }
+
+    pub fn with_default_volume(bpm: u16, text: impl ToString) -> Self {
+        Self {
+            bpm,
+            states: Vec::new(),
+            text: text.to_string(),
+            current_state: State {
+                bpm,
+                ..Default::default()
+            },
         }
     }
 
@@ -181,12 +198,16 @@ impl Sheet {
                     self.current_state.volume = State::D_VOLUME;
                 }
                 'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
-                    // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
-                    self.current_state.instrument = 125;
-                    self.current_state.note = Some(Note::Do);
-                    let aux_state = *self.states.last().unwrap();
+                    // Nesse caso, quando não há uma nota anterior, altera o instrumento para o telefone
+                    let aux = self.current_state;
+
+                    self.current_state.instrument = Self::TELEPHONE_PROGRAM;
                     self.states.push(self.current_state);
-                    self.current_state = aux_state;
+
+                    self.current_state.note = Some(Note::Fa);
+                    self.states.push(self.current_state);
+
+                    self.current_state = aux;
                 }
                 Self::R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
@@ -237,7 +258,7 @@ mod test {
     #[test]
     fn match_process_general_text_behavior() {
         let text = "; \nasBPM+ ?!;-+".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "; \nasß ?!;-+".to_string();
@@ -248,7 +269,7 @@ mod test {
     #[test]
     fn match_process_note_text_behavior() {
         let text = "AaBbCcDdEeFfGg".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "AaBbCcDdEeFfGg".to_string();
@@ -259,7 +280,7 @@ mod test {
     #[test]
     fn match_process_substring_text_behavior() {
         let text = "BPM+R+R-".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let mut expected_text = Sheet::BPM_PLUS.to_string();
@@ -272,7 +293,7 @@ mod test {
     #[test]
     fn match_process_vogals_text_behavior() {
         let text = "OoIiUuAiBICuDUEoFo".to_string();
-        let mut sheet = Sheet::new(State::D_BPM, text);
+        let mut sheet = Sheet::with_default_volume(State::D_BPM, text);
         let received_text = sheet.map_substring_to_char();
 
         let expected_text = "OoIiUuAABBCCDDEEFF".to_string();
