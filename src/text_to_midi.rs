@@ -181,12 +181,24 @@ impl Sheet {
                     self.current_state.volume = State::D_VOLUME;
                 }
                 'o' | 'O' | 'I' | 'i' | 'u' | 'U' => {
+                    // Nesse caso, em que há uma nota anterior, repete nota
+                    let mut is_note_sucessor  = false;
+                    if let Some(last_state) = self.states.last() {
+                        if last_state.note.is_none() {
+                            is_note_sucessor = true;
+                            self.current_state.note = last_state.note;
+                        }
+                    } 
                     // Nesse caso, caso que em que não há uma nota anterior, altera o instrumento para o telefone
-                    self.current_state.instrument = 125;
-                    self.current_state.note = Some(Note::Do);
-                    let aux_state = *self.states.last().unwrap();
-                    self.states.push(self.current_state);
-                    self.current_state = aux_state;
+                    if !is_note_sucessor{
+                        let aux = self.current_state.clone();
+                        self.current_state.instrument = 125;
+                        self.current_state.note = Some(Note::Fa);
+                        self.states.push(self.current_state);
+                        self.current_state = aux;
+                    }
+
+                    
                 }
                 Self::R_PLUS => {
                     // Aumenta UMA oitava; Se não puder, aumentar, volta à oitava default (de início)
