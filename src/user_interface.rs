@@ -20,7 +20,7 @@ pub struct UserInterface {
     saved_file_dialog: Option<FileDialog>,
     file_content: String,
     bpm: u16,
-    volume: u16
+    volume: u16,
 }
 
 impl UserInterface {
@@ -32,7 +32,7 @@ impl UserInterface {
             saved_file_dialog: None,
             file_content: String::new(),
             bpm: State::D_BPM,
-            volume: State::D_VOLUME
+            volume: State::D_VOLUME,
         }
     }
 }
@@ -48,14 +48,14 @@ impl App for UserInterface {
                 }
 
                 if (ui.button("Play")).clicked() {
-                    let test =
-                        text_to_midi::Sheet::new(self.bpm, self.volume, self.file_content.to_string());
+                    let test = text_to_midi::Sheet::new(
+                        self.bpm,
+                        self.volume,
+                        self.file_content.to_string(),
+                    );
                     let actions = test.process();
                     let file = MidiAction::as_track(&actions);
-                    println!("{}", self.bpm);
-
                     let _ = play_file(&file);
-
                 }
 
                 if (ui.button("Save")).clicked() {
@@ -64,10 +64,9 @@ impl App for UserInterface {
                     self.saved_file_dialog = Some(dialog);
                 }
 
-                ui.add(egui::Slider::new(&mut self.bpm, 0..=State::MAX_BPM).text("BPM"));           
+                ui.add(egui::Slider::new(&mut self.bpm, 0..=State::MAX_BPM).text("BPM"));
 
-                ui.add(egui::Slider::new(&mut self.volume, 0..=State::MAX_VOLUME).text("Volume"));           
-
+                ui.add(egui::Slider::new(&mut self.volume, 0..=State::MAX_VOLUME).text("Volume"));
 
                 if let Some(dialog) = &mut self.open_file_dialog {
                     if dialog.show(ctx).selected() {
