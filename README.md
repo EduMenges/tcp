@@ -1,8 +1,10 @@
 # TCP
 
-Código para a cadeira de Técnicas de Construção de Programas.
+Código para a cadeira de Técnicas de Construção de Programas, `INF01120`, do professor Marcelo Soares Pimenta.
 
 O trabalho consistia em receber do usuário um texto, fazer um mapeamento para diferentes ações do sistema MIDI, tendo a opção de tocar o resultado e/ou salvá-lo.
+
+Usámos Rust porque gostamos de sofrer.
 
 ## In English
 
